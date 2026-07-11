@@ -7,6 +7,8 @@ spring-dependency-management = "1.1.7"
 spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-boot-restclient = { module = "org.springframework.boot:spring-boot-restclient" }
+spring-boot-resttestclient = { module = "org.springframework.boot:spring-boot-resttestclient" }
 # AssertJ and JUnit 5 come transitively via spring-boot-starter-test; no separate entry needed.
 # Version for spring-boot-starter-* is managed by the Spring Boot BOM (applied via the
 # io.spring.dependency-management plugin below) — do not pin it unless overriding the BOM for a

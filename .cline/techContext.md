@@ -37,10 +37,10 @@ eu.cleankod.carrental
     (service impl)        -- ReservationService
   adapter
     in
-      rest                -- optional, minimal — only if the REST stage is implemented
+      rest                -- ReservationController, request/response DTOs, RestExceptionHandler
     out
       persistence          -- InMemoryCarInventoryRepository (concurrency-safe: per-car-type locking)
-  config                   -- Spring @Configuration / bean wiring, if any is needed
+  config                   -- CarRentalConfiguration, FleetProperties (Spring bean wiring)
 ```
 
 ## Domain Model
@@ -68,7 +68,7 @@ eu.cleankod.carrental
 ## Application Ports / Services
 
 **Inbound:**
-- `ReserveCarUseCase` — the one use case; called by tests and, if built, the REST controller.
+- `ReserveCarUseCase` — the one use case; called by tests and by `ReservationController`.
 - `ReservationService` implements it as a thin delegate to `CarInventoryRepository` — it has no logic of
   its own beyond wiring, since the atomic check-and-record decision belongs entirely to the repository.
 
@@ -89,6 +89,29 @@ eu.cleankod.carrental
   `InMemoryCarInventoryRepositoryConcurrencyTest` races many threads for the same car type and asserts
   exactly `totalUnits` succeed and the rest are rejected, proving the atomicity property directly.
 
+## REST Adapter
+
+- `POST /api/v1/reservations` — `{carType, start, days}` → `201 Created` with the reservation
+  (`id`, `carType`, `start`, `days`). Mirrors `RentalPeriod`'s own shape rather than a `start`/`end`
+  range — see "REST API rules" in `.clinerules` for the trade-off considered.
+- `RestExceptionHandler` (`@RestControllerAdvice`) maps `CarUnavailableException` → `409`,
+  `InvalidRentalPeriodException` → `400`, Bean Validation / malformed-JSON failures → `400`, anything
+  else → `500` generic — all as `ErrorResponse(errorId, code, message, details)`, never a raw exception
+  name or stack trace.
+- `CarRentalConfiguration` wires `InMemoryCarInventoryRepository` and `ReservationService` as beans;
+  `FleetProperties` (`@ConfigurationProperties(prefix = "car-rental.fleet")`) externalizes the per-type
+  unit counts from `application.yml` instead of hardcoding them in the wiring.
+- Tests: `ReservationControllerTest` — `@SpringBootTest(webEnvironment = RANDOM_PORT)` +
+  `TestRestTemplate` against the real context (no `MockMvc`, no mocked use case). Needed two extra test
+  dependencies Spring Boot 4 split out of the core test starter:
+  `org.springframework.boot:spring-boot-restclient` (`RestTemplateBuilder`) and
+  `org.springframework.boot:spring-boot-resttestclient` (`TestRestTemplate`, package
+  `org.springframework.boot.resttestclient`) — also needs `@AutoConfigureTestRestTemplate` on the test
+  class. Confirmed against `bet-settlement-trigger`, which hit the same issue.
+- Manually verified with the app actually running (`./gradlew bootJar` + `java -jar` + `curl`): success
+  (201), capacity exhaustion (409), validation failure (400), and malformed enum value (400) all return
+  the expected status and `ErrorResponse` shape.
+
 ## Key Decisions
 
 - Per-car-type locking (dedicated lock object per `CarType`, not the enum constant itself) for atomic
@@ -99,7 +122,9 @@ eu.cleankod.carrental
 - No messaging — single synchronous operation.
 - No Testcontainers, Actuator, Micrometer, or MkDocs — none serve a purpose for this assignment's scope
   (see "Technology stack" in `.clinerules` for why).
-- REST adapter is optional and deferred to its own stage — the brief only requires unit tests.
+- REST adapter implemented (minimal, one endpoint) — the brief only requires unit tests, so this stays a
+  demonstration of the adapter boundary, not a feature to expand. `start`+`days` request shape chosen
+  over `start`+`end` deliberately — see "REST Adapter" above.
 - Dockerfile does not build the jar — it expects `build/libs/*.jar` to already exist (run
   `./gradlew bootJar` on the host/CI first), mirroring a real CI's separate compile-then-package stages;
   `.dockerignore` sends only that jar into the build context. It then extracts the boot jar into Spring

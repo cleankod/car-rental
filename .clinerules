@@ -88,10 +88,12 @@ ceremony.
   event/queue-driven flow.
 - **Secondary/mocked integrations**: none. There is no second system to mock — the in-memory store *is*
   the real (simulated) persistence for this system, not a stand-in for something else.
-- **REST adapter**: optional, minimal, decided at the dedicated stage (see "Branching workflow"). The
-  brief never asks for an HTTP API — "unit tests" are the explicit verification mechanism — so a REST
-  layer is a nice-to-have demonstration of the adapter boundary, added only if time remains after the
-  core use case and its tests are solid. It must not come at the expense of the graded core.
+- **REST adapter**: implemented, minimal — one endpoint, `POST /api/v1/reservations`, taking `carType`,
+  `start`, `days` (matching the domain's own `RentalPeriod` shape rather than a date range — see
+  "REST API rules" below for why). Fleet sizes are externalized to `car-rental.fleet.*` in
+  `application.yml` rather than hardcoded, giving the `config` package a real purpose. The brief never
+  asks for an HTTP API — "unit tests" are the explicit verification mechanism — so this stays a
+  demonstration of the adapter boundary, not a feature to expand.
 - **Concurrency strategy**: deliberate design concern, not an afterthought. The in-memory inventory/
   reservation store must guarantee that concurrent reservation attempts for the same car type and
   overlapping window cannot both succeed when only one unit remains — see "Domain model rules" and the
@@ -160,10 +162,10 @@ eu.cleankod.carrental
     (service impl)        -- ReservationService implementing the in-port, depending on the out-port
   adapter
     in
-      rest                -- optional, minimal — only if the REST stage is implemented
+      rest                -- ReservationController, request/response DTOs, RestExceptionHandler
     out
       persistence          -- thread-safe in-memory CarInventoryRepository implementation
-  config                   -- Spring @Configuration / bean wiring, if any is needed
+  config                   -- Spring @Configuration / @ConfigurationProperties bean wiring
 ```
 
 - Use `adapter`, not `infrastructure`, as the package segment.
@@ -193,8 +195,8 @@ eu.cleankod.carrental
   offending values if something actually needs to read them back; otherwise the constructed message is
   enough and extra accessors are unused surface area.
 - Exception messages must identify the affected car type/period and describe the violated invariant.
-- Domain exceptions should be handled in a global exception handler in the adapter layer, if/when the
-  REST adapter exists; until then, callers (tests, or a future adapter) catch them directly.
+- Domain exceptions are handled in a global exception handler in the adapter layer (`RestExceptionHandler`)
+  — see "REST API rules" for the mapping.
 - Domain methods must not catch domain exceptions — no try/catch inside domain classes.
 
 ## Domain model rules
@@ -241,18 +243,26 @@ eu.cleankod.carrental
 
 ## REST API rules
 
-<!-- Applies only if the optional REST stage is implemented. If unit tests alone are judged sufficient
-     to demonstrate the requirements within the two-hour scope, skip this section and this stage
-     entirely — the brief only requires unit tests, not an HTTP API. -->
-
-- Endpoint(s), input fields, and status codes are to be decided at the REST stage, not before — recorded
-  here once implemented, and in `techContext.md`.
-- Validate input using Bean Validation.
-- Return the appropriate success status (e.g. `201 Created` for a synchronous reservation) — pick
-  deliberately, don't default to `200`.
-- Implement global error handling; map domain exceptions to client-facing error responses.
-- Error responses should contain: `errorId`, `code`, `message`, `details` where useful.
-- Do not leak internal exception names or stack traces.
+- Endpoint: `POST /api/v1/reservations`.
+- Input fields: `carType` (`SEDAN`/`SUV`/`VAN`), `start` (`LocalDateTime`), `days` (positive `int`) —
+  deliberately mirrors `RentalPeriod`'s own `(start, days)` shape rather than a `start`/`end` date range.
+  An end-timestamp would be more conventional for an HTTP client, but would require inventing a policy
+  for what happens when the gap isn't a whole number of days (reject it? silently round it, shifting the
+  actual return time the client asked for?) — that policy question is tangential to what this assignment
+  grades, and the brief's own wording ("for a given number of days") already matches the `days` shape.
+  Considered and decided against the alternative, not defaulted.
+- Response: `201 Created` with the created reservation (`id`, `carType`, `start`, `days`).
+- Validate input using Bean Validation (`@NotNull`, `@Positive`).
+- Global error handling (`RestExceptionHandler`, `@RestControllerAdvice`) maps: `CarUnavailableException`
+  → `409 Conflict`; `InvalidRentalPeriodException` → `400 Bad Request`; Bean Validation failures
+  (`MethodArgumentNotValidException`) → `400 Bad Request` with per-field `details`; unparseable
+  JSON/unrecognized enum values (`HttpMessageNotReadableException`) → `400 Bad Request`; anything else →
+  `500 Internal Server Error` with a generic message, never the raw exception name/stack trace.
+- Error responses contain: `errorId` (random, for correlating with logs/support), `code` (stable,
+  machine-readable), `message`, `details` (list, empty unless there's something field-specific to add).
+- Fleet sizes (`car-rental.fleet.sedan-units`/`suv-units`/`van-units`) are externalized in
+  `application.yml` via `FleetProperties`, not hardcoded in the wiring — see `CarRentalConfiguration` in
+  the `config` package.
 
 ## Observability rules
 
@@ -282,6 +292,12 @@ eu.cleankod.carrental
   the class that actually implements the rule (`CarTypeInventoryTest`, `InMemoryCarInventoryRepositoryTest`)
   and keep tests of a thin delegator (e.g. `ReservationServiceTest`) limited to confirming the wiring
   (a representative success case and a representative failure case), not re-deriving every edge case.
+- REST tests use `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `TestRestTemplate`
+  (`org.springframework.boot:spring-boot-resttestclient`, plus `spring-boot-restclient` — Spring Boot 4
+  split `RestTemplateBuilder`/`TestRestTemplate` out of the core test starter into their own modules)
+  against the real application context — not `MockMvc`, and not a mocked use case. Fix fleet sizes via
+  `@TestPropertySource` per test class so capacity-exhaustion scenarios don't depend on the production
+  defaults in `application.yml`.
 - Test at least: a reservation succeeds when a unit of the requested type is available for the whole
   period; a reservation is rejected when no unit of that type remains available; overlapping periods for
   the same type are correctly detected and rejected; the boundary case where two periods touch but don't

@@ -1,3 +1,9 @@
 spring:
   application:
     name: car-rental
+
+car-rental:
+  fleet:
+    sedan-units: 2
+    suv-units: 2
+    van-units: 1
