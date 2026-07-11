@@ -45,23 +45,35 @@ eu.cleankod.carrental
 
 ## Domain Model
 
-<!-- Not yet implemented — filled in as the domain-model stage lands. -->
-
-- `CarType` — enum: `SEDAN`, `SUV`, `VAN`
-- `RentalPeriod` — value type: start date/time + number of days; boundary semantics for overlap TBD and
-  must be explicit
-- `Reservation` — car type + rental period + identity
-- Inventory/allocation concept enforcing the limited-units-per-type constraint — TBD
+- `CarType` — enum: `SEDAN`, `SUV`, `VAN`.
+- `RentalPeriod` — record: `start` (`LocalDateTime`), `days` (`int`). Half-open interval
+  `[start, start + days)`; `overlaps(other)` uses strict `isBefore` comparisons so two periods that only
+  touch at the boundary (one ends exactly when the other starts) do **not** overlap — back-to-back
+  reservations of the same car are allowed. Rejects `days <= 0` and a `null` start via
+  `InvalidRentalPeriodException`.
+- `ReservationId` — record wrapping a `UUID`; `generate()` factory.
+- `Reservation` — record: `id`, `carType`, `period`; `of(carType, period)` factory generates the id;
+  `overlaps(other)` is true only when both the car type matches and the periods overlap.
+- `CarTypeInventory` — record: `carType`, `totalUnits`. `hasCapacityFor(existingPeriods, candidate)`
+  accepts the candidate iff fewer than `totalUnits` existing periods overlap it. Deliberately a
+  conservative admission rule, not an optimal bin-repacking scheduler: existing reservations are never
+  reassigned between units, so a small number of pathological/fragmented-inventory cases could reject a
+  period that a cleverer reassignment could still fit — documented as a known trade-off, not an
+  oversight. Rejects `totalUnits <= 0` via `InvalidFleetSizeException`.
+- Exceptions so far: `InvalidRentalPeriodException`, `InvalidFleetSizeException`. `CarUnavailableException`
+  (rejecting a reservation attempt) is deferred to the `reservation-use-case` stage, where something
+  actually throws it — no point creating it earlier as dead code.
 
 ## Application Ports / Services
 
-<!-- Not yet implemented. -->
+<!-- Not yet implemented — lands in the reservation-use-case stage. -->
 
 **Inbound:**
 - `ReserveCarUseCase` — the one use case; called by tests and, if built, the REST controller
 
 **Outbound:**
-- `CarInventoryRepository` → thread-safe in-memory implementation
+- `CarInventoryRepository` → thread-safe in-memory implementation, using `CarTypeInventory.hasCapacityFor`
+  against whatever reservations it currently holds for that type
 
 ## Key Decisions
 

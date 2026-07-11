@@ -2,21 +2,30 @@
 
 ## Current State
 
-- Branch: `architecture-boundaries`
-- Based on: `master` after `project-scaffolding` was merged (PR #1)
-- Task: establishing the package skeleton and ADR 0001 for the architecture stage. No domain/feature
-  behaviour implemented yet — that starts in `domain-model`.
+- Branch: `domain-model`
+- Based on: `master` after `architecture-boundaries` was merged (PR #2)
+- Task: implementing the domain model — `CarType`, `RentalPeriod`, `Reservation`, `CarTypeInventory`,
+  domain exceptions, and their unit tests. No application/port/adapter behaviour yet — that starts in
+  `reservation-use-case`.
 
 ## Most Recent Decisions
 
+- Domain model implemented as immutable records: `CarType` (enum), `RentalPeriod` (half-open interval,
+  `overlaps` deliberately excludes the touching-boundary case — back-to-back reservations allowed),
+  `ReservationId`/`Reservation`, `CarTypeInventory` (the limited-inventory admission rule:
+  `hasCapacityFor` accepts a candidate iff fewer than `totalUnits` existing periods overlap it).
+- `CarTypeInventory`'s admission rule is a deliberate, documented trade-off: it's conservative (never
+  overbooks) but not an optimal bin-repacking scheduler — existing reservations are never reassigned
+  between units. Flagged as a known limitation for the README, not hidden as an oversight.
+- `InvalidRentalPeriodException` and `InvalidFleetSizeException` created now since something throws them
+  in this stage; `CarUnavailableException` deferred to `reservation-use-case`, where it's actually thrown
+  — avoids dead/untested exception classes.
+- Tests use JUnit 5 `@Nested` classes grouped by method/behaviour under test (e.g. `Constructor`,
+  `Overlaps`, `HasCapacityFor`), plain-sentence method names inside — not method-name prefixes. Now
+  codified in `.clinerules` Testing rules for later stages to follow.
 - Selected lightweight Hexagonal Architecture over plain layered — evaluated per `.clinerules`
-  "Architecture rules", not defaulted; full rationale now recorded in
+  "Architecture rules", not defaulted; full rationale in
   `docs/decisions/0001-use-lightweight-hexagonal-architecture.md`.
-- Package skeleton created: `domain`, `application` (+ `port.in`, `port.out`), `adapter.out.persistence`
-  — each a `package-info.java` only, no classes yet. `config` and `adapter.in.rest` deliberately not
-  created yet — nothing needs Spring wiring or a REST adapter until later stages.
-- ADR numbering starts at `0001` for this decision — Java 25 and Gradle Groovy DSL were fixed inputs to
-  the assignment, not evaluated choices, so they don't get ADRs of their own.
 - Persistence: in-memory only, thread-safe, no DB/migrations.
 - No messaging, no secondary/mocked integrations — single synchronous use case.
 - No Testcontainers, Actuator, Micrometer, or MkDocs — none apply to this assignment's scope.
@@ -33,10 +42,10 @@
 
 ## Project Status
 
-Bootstrap and rules are merged. Currently on `architecture-boundaries`, adding the package skeleton and
-ADR 0001. Next stage after this one is `domain-model`. **Branch creation is the user's step, not
-Claude Code's** — implementation of the next stage begins only after the user creates and checks out
-that branch and confirms.
+Bootstrap, rules, and architectural boundaries are merged. Currently on `domain-model`, implementing the
+domain types and their unit tests. Next stage after this one is `reservation-use-case`. **Branch
+creation is the user's step, not Claude Code's** — implementation of the next stage begins only after
+the user creates and checks out that branch and confirms.
 
 ## Session Resumption Notes
 

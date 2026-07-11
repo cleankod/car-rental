@@ -249,6 +249,9 @@ eu.cleankod.carrental
   asks for. No Testcontainers, no DB/broker integration tests: there is nothing external to integrate
   with.
 - Use JUnit 5 and AssertJ.
+- Group test methods with `@Nested` classes by the method/behaviour under test (e.g. a `Constructor`
+  class, an `Overlaps` class), with plain-sentence method names inside each (`isTrueWhen...`), rather
+  than prefixing every method name with the thing being tested.
 - Tests should use given/when/then comments.
 - Mockito only where a test double genuinely clarifies a unit test of orchestration logic (e.g. testing
   `ReservationService` against a fake/mocked `CarInventoryRepository`) — do not mock the domain itself.
