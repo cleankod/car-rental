@@ -58,21 +58,67 @@ class ReservationControllerTest {
         }
 
         @Test
-        void returnsConflictWhenNoUnitOfThatTypeRemainsAvailable() {
-            // given: exhaust the single configured SUV unit
-            ReservationRequest request = new ReservationRequest(CarType.SUV, START.plusDays(30), 2);
+        void returnsConflictWhenAnOverlappingPeriodLeavesNoUnitAvailable() {
+            // given: the single configured SUV unit is booked for [Aug 31, Sep 2)
+            ReservationRequest firstRequest = new ReservationRequest(CarType.SUV, START.plusDays(30), 2);
             ResponseEntity<ReservationResponse> firstResponse =
-                    restTemplate.postForEntity(PATH, request, ReservationResponse.class);
+                    restTemplate.postForEntity(PATH, firstRequest, ReservationResponse.class);
             assertThat(firstResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
 
-            // when
+            // when: a genuinely different but overlapping period is requested — not a repeat of the
+            // same request — proving the interval-overlap rule itself is reachable through HTTP, not
+            // just object-equality of an identical request
+            ReservationRequest overlappingRequest = new ReservationRequest(CarType.SUV, START.plusDays(31), 2);
             ResponseEntity<ErrorResponse> secondResponse =
-                    restTemplate.postForEntity(PATH, request, ErrorResponse.class);
+                    restTemplate.postForEntity(PATH, overlappingRequest, ErrorResponse.class);
 
             // then
             assertThat(secondResponse.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-            assertThat(secondResponse.getBody()).isNotNull();
-            assertThat(secondResponse.getBody().code()).isEqualTo("CAR_UNAVAILABLE");
+            ErrorResponse body = secondResponse.getBody();
+            assertThat(body).isNotNull();
+            assertThat(body.code()).isEqualTo("CAR_UNAVAILABLE");
+            assertThat(body.message()).contains("SUV");
+        }
+
+        @Test
+        void allowsBackToBackReservationsOfTheSameTypeWhenPeriodsDoNotOverlap() {
+            // given: the single configured VAN unit, reserved for a first period
+            ReservationRequest firstRequest = new ReservationRequest(CarType.VAN, START.plusDays(100), 2);
+            ResponseEntity<ReservationResponse> firstResponse =
+                    restTemplate.postForEntity(PATH, firstRequest, ReservationResponse.class);
+            assertThat(firstResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+            ReservationResponse firstBody = firstResponse.getBody();
+            assertThat(firstBody).isNotNull();
+
+            // when: a second, back-to-back period for the same type is requested — starting exactly
+            // when the first ends
+            LocalDateTime firstPeriodEnd = firstBody.start().plusDays(firstBody.days());
+            ReservationRequest secondRequest = new ReservationRequest(CarType.VAN, firstPeriodEnd, 2);
+            ResponseEntity<ReservationResponse> secondResponse =
+                    restTemplate.postForEntity(PATH, secondRequest, ReservationResponse.class);
+
+            // then: both succeed, even with only one unit — touching periods are not overlapping
+            assertThat(secondResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        }
+
+        @Test
+        void tracksCapacityIndependentlyAcrossCarTypes() {
+            // given
+            ReservationRequest sedanRequest = new ReservationRequest(CarType.SEDAN, START.plusDays(200), 3);
+            ResponseEntity<ReservationResponse> sedanResponse =
+                    restTemplate.postForEntity(PATH, sedanRequest, ReservationResponse.class);
+            assertThat(sedanResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+            // when: a SUV reservation for the exact same period should not be blocked by the SEDAN one
+            ReservationRequest suvRequest = new ReservationRequest(CarType.SUV, START.plusDays(200), 3);
+            ResponseEntity<ReservationResponse> suvResponse =
+                    restTemplate.postForEntity(PATH, suvRequest, ReservationResponse.class);
+
+            // then
+            assertThat(suvResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+            ReservationResponse suvBody = suvResponse.getBody();
+            assertThat(suvBody).isNotNull();
+            assertThat(suvBody.carType()).isEqualTo(CarType.SUV);
         }
 
         @Test

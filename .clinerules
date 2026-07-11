@@ -274,36 +274,50 @@ eu.cleankod.carrental
 
 ## Testing rules
 
-- Unit tests are the primary and sufficient verification mechanism — this is what the brief explicitly
-  asks for. No Testcontainers, no DB/broker integration tests: there is nothing external to integrate
-  with.
+- Pure-domain unit tests remain the primary proof of the business rule — the brief explicitly asks for
+  unit tests. An integration test through the REST entry point additionally proves the wiring and is
+  what enables refactoring/TDD without test churn (see below). No Testcontainers, no DB/broker
+  integration tests: there is nothing external to integrate with.
 - Use JUnit 5 and AssertJ.
 - Group test methods with `@Nested` classes by the method/behaviour under test (e.g. a `Constructor`
   class, an `Overlaps` class), with plain-sentence method names inside each (`isTrueWhen...`), rather
   than prefixing every method name with the thing being tested.
 - Tests should use given/when/then comments.
-- Prefer testing application services through their real port implementation (e.g.
-  `ReservationService` against the real `InMemoryCarInventoryRepository`) over mocking the port — the
-  real in-memory implementation has no external dependencies, so there's no cost to using it directly,
-  and it avoids a hand-rolled test double duplicating logic the real adapter already has. Reserve
-  Mockito for cases where constructing a real collaborator genuinely isn't practical; do not mock the
-  domain itself.
-- Avoid duplicating the same scenario at multiple layers: put exhaustive capacity/overlap coverage on
-  the class that actually implements the rule (`CarTypeInventoryTest`, `InMemoryCarInventoryRepositoryTest`)
-  and keep tests of a thin delegator (e.g. `ReservationServiceTest`) limited to confirming the wiring
-  (a representative success case and a representative failure case), not re-deriving every edge case.
+- Black-box by default: unit-test only pure, dependency-free classes — the domain (`RentalPeriod`,
+  `Reservation`, `CarTypeInventory`, and the domain exceptions). Any class with an injected collaborator
+  (the application service, the persistence adapter) is exercised through the real REST entry point
+  (`ReservationControllerTest`: full Spring context, real `ReservationService` + real
+  `InMemoryCarInventoryRepository`, no mocks) rather than in its own per-layer test — so internal
+  refactoring of the service or adapter cannot break tests as long as the HTTP behaviour is unchanged.
+  Put exhaustive capacity/overlap coverage on the pure domain class that owns the rule
+  (`CarTypeInventoryTest`) plus `RentalPeriodTest` for interval/boundary semantics; prove the wiring
+  once, end-to-end, through HTTP. Reserve Mockito for cases where constructing a real collaborator
+  genuinely isn't practical (none currently); do not mock the domain itself. See
+  `docs/decisions/0003-favor-black-box-tests-through-the-rest-entry-point.md`.
+- Concurrency is the one deliberate white-box exception:
+  `InMemoryCarInventoryRepositoryConcurrencyTest` races threads directly against
+  `repository.reserve(...)` because reproducing tight, `CountDownLatch`-synchronized contention through
+  real HTTP would be slow and non-deterministic. This is a justified exception, not a precedent for
+  per-layer testing generally.
 - REST tests use `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `TestRestTemplate`
   (`org.springframework.boot:spring-boot-resttestclient`, plus `spring-boot-restclient` — Spring Boot 4
   split `RestTemplateBuilder`/`TestRestTemplate` out of the core test starter into their own modules)
   against the real application context — not `MockMvc`, and not a mocked use case. Fix fleet sizes via
   `@TestPropertySource` per test class so capacity-exhaustion scenarios don't depend on the production
-  defaults in `application.yml`.
+  defaults in `application.yml`. Because the Spring context (and its singleton repository bean) is
+  cached across test methods in the same class with no `@DirtiesContext`, and JUnit does not guarantee
+  method execution order, give each test method a car-type/period combination that cannot collide with
+  any other test's regardless of order (e.g. clearly separated months) rather than relying on
+  `@DirtiesContext` or execution order.
 - Test at least: a reservation succeeds when a unit of the requested type is available for the whole
   period; a reservation is rejected when no unit of that type remains available; overlapping periods for
   the same type are correctly detected and rejected; the boundary case where two periods touch but don't
-  truly overlap is deliberately tested one way or the other, not left accidental; and — the concurrency
-  requirement — when only one unit remains, concurrent reservation attempts for an overlapping period
-  result in exactly one success and the rest rejected.
+  truly overlap is deliberately tested one way or the other, not left accidental; back-to-back
+  (touching, non-overlapping) reservations of the same type both succeed even at one unit — proven
+  end-to-end through the REST endpoint, not only as a domain rule; capacity is tracked independently
+  per car type — reserving one type never consumes another's inventory (proven end-to-end); and — the
+  concurrency requirement — when only one unit remains, concurrent reservation attempts for an
+  overlapping period result in exactly one success and the rest rejected.
 - Exception assertions must use `catchThrowable`: call `catchThrowable(...)` in the `// when` section,
   assign the result to a variable, and assert on it in the `// then` section. Never use
   `assertThatThrownBy(...)` or `assertThatExceptionOfType(...)`.
@@ -375,7 +389,9 @@ eu.cleankod.carrental
   5. `feat: add thread-safe in-memory reservation storage` (concrete `CarInventoryRepository`, atomic
      allocation, concurrency tests + ADR on the concurrency strategy)
   6. `feat: expose reservation REST API` (only if this stage is undertaken)
-  7. `docs: finalize assessment documentation` (README, limitations/trade-offs, AI usage disclosure,
+  7. `test: restructure suite toward black-box coverage through the REST entry point` (delete
+     redundant per-layer tests, add/strengthen REST-level scenarios, ADR 0003)
+  8. `docs: finalize assessment documentation` (README, limitations/trade-offs, AI usage disclosure,
      "given more time")
 - Do not proceed to the next commit if current tests/build are broken.
 
@@ -390,6 +406,7 @@ eu.cleankod.carrental
   - `reservation-use-case`
   - `in-memory-persistence`
   - `rest-api` (optional — only if undertaken)
+  - `black-box-testing`
   - `documentation`
 - Workflow per stage:
   1. User creates the branch and tells Claude Code.
