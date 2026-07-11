@@ -1,6 +1,7 @@
 package eu.cleankod.carrental.domain;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * A half-open time window {@code [start, start + days)}: a rental beginning at {@code start} and
@@ -11,12 +12,9 @@ import java.time.LocalDateTime;
 public record RentalPeriod(LocalDateTime start, int days) {
 
     public RentalPeriod {
-        if (start == null) {
-            throw new InvalidRentalPeriodException("start must not be null");
-        }
+        Objects.requireNonNull(start, "start must not be null");
         if (days <= 0) {
-            throw new InvalidRentalPeriodException(
-                    "days must be positive for period starting at " + start + ", was: " + days);
+            throw new InvalidRentalPeriodException(start, days);
         }
     }
 

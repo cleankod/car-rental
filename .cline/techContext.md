@@ -49,8 +49,9 @@ eu.cleankod.carrental
 - `RentalPeriod` — record: `start` (`LocalDateTime`), `days` (`int`). Half-open interval
   `[start, start + days)`; `overlaps(other)` uses strict `isBefore` comparisons so two periods that only
   touch at the boundary (one ends exactly when the other starts) do **not** overlap — back-to-back
-  reservations of the same car are allowed. Rejects `days <= 0` and a `null` start via
-  `InvalidRentalPeriodException`.
+  reservations of the same car are allowed. Rejects `days <= 0` via `InvalidRentalPeriodException` (which
+  builds its own message from `start`/`days`, not a message passed in); a `null` start is a precondition,
+  rejected via `Objects.requireNonNull`, not a domain exception.
 - `ReservationId` — record wrapping a `UUID`; `generate()` factory.
 - `Reservation` — record: `id`, `carType`, `period`; `of(carType, period)` factory generates the id;
   `overlaps(other)` is true only when both the car type matches and the periods overlap.

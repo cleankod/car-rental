@@ -172,7 +172,19 @@ eu.cleankod.carrental
   domain rule violations.
 - Custom domain exceptions are named after the violated invariant, e.g. `CarUnavailableException`
   (no unit of the requested type is free for the requested period), `InvalidRentalPeriodException`
-  (the requested period itself is malformed — e.g. non-positive duration).
+  (a rental period was constructed with a non-positive duration).
+- Each exception type maps to exactly one violated invariant — do not reuse one type for two
+  conceptually different failure reasons. If a value object can be invalid in two distinct ways, that's
+  either two exception types, or one of the two isn't actually a business-rule violation (see the next
+  rule). Tests should then be able to identify the exact failure with a plain `isInstanceOf` — no need to
+  parse messages to tell cases apart.
+- A required field being `null` is a precondition, not a business-rule violation — use
+  `Objects.requireNonNull`, not a custom domain exception, unless nullness itself is the rule being
+  tested (e.g. "a car must have an owner").
+- Exception constructors take the raw offending value(s), not a pre-built message string — the exception
+  builds its own message from those values in its constructor. Only add accessor methods for the
+  offending values if something actually needs to read them back; otherwise the constructed message is
+  enough and extra accessors are unused surface area.
 - Exception messages must identify the affected car type/period and describe the violated invariant.
 - Domain exceptions should be handled in a global exception handler in the adapter layer, if/when the
   REST adapter exists; until then, callers (tests, or a future adapter) catch them directly.

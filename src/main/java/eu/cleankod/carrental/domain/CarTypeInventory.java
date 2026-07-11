@@ -19,8 +19,7 @@ public record CarTypeInventory(CarType carType, int totalUnits) {
     public CarTypeInventory {
         Objects.requireNonNull(carType, "carType must not be null");
         if (totalUnits <= 0) {
-            throw new InvalidFleetSizeException(
-                    "totalUnits must be positive for carType " + carType + ", was: " + totalUnits);
+            throw new InvalidFleetSizeException(carType, totalUnits);
         }
     }
 

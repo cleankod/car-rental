@@ -21,7 +21,8 @@ class RentalPeriodTest {
             var thrown = catchThrowable(() -> new RentalPeriod(START, 0));
 
             // then
-            assertThat(thrown).isInstanceOf(InvalidRentalPeriodException.class);
+            assertThat(thrown).isInstanceOf(InvalidRentalPeriodException.class)
+                    .hasMessage("days must be positive for period starting at " + START + ", was: 0");
         }
 
         @Test
@@ -30,7 +31,8 @@ class RentalPeriodTest {
             var thrown = catchThrowable(() -> new RentalPeriod(START, -1));
 
             // then
-            assertThat(thrown).isInstanceOf(InvalidRentalPeriodException.class);
+            assertThat(thrown).isInstanceOf(InvalidRentalPeriodException.class)
+                    .hasMessage("days must be positive for period starting at " + START + ", was: -1");
         }
 
         @Test
@@ -38,8 +40,10 @@ class RentalPeriodTest {
             // given / when
             var thrown = catchThrowable(() -> new RentalPeriod(null, 1));
 
-            // then
-            assertThat(thrown).isInstanceOf(InvalidRentalPeriodException.class);
+            // then: a required field being null is a precondition, not a business-rule violation —
+            // Objects.requireNonNull, not a custom domain exception
+            assertThat(thrown).isInstanceOf(NullPointerException.class)
+                    .hasMessage("start must not be null");
         }
     }
 

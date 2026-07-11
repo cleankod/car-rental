@@ -22,7 +22,8 @@ class CarTypeInventoryTest {
             var thrown = catchThrowable(() -> new CarTypeInventory(CarType.SEDAN, 0));
 
             // then
-            assertThat(thrown).isInstanceOf(InvalidFleetSizeException.class);
+            assertThat(thrown).isInstanceOf(InvalidFleetSizeException.class)
+                    .hasMessage("totalUnits must be positive for carType SEDAN, was: 0");
         }
     }
 
