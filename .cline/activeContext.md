@@ -2,48 +2,43 @@
 
 ## Current State
 
-- Branch: `in-memory-persistence`
-- Based on: `master` after `reservation-use-case` was merged (PR #4)
-- Task: hardening the *same* `InMemoryCarInventoryRepository` for concurrency (per-car-type locking),
-  adding concurrency tests, and ADR 0002. No new repository class was created — this stage upgrades the
-  one already built in `reservation-use-case`.
+- Branch: `rest-api`
+- Based on: `master` after `in-memory-persistence` was merged (PR #5)
+- Task: implementing the minimal REST adapter — `ReservationController`, request/response DTOs,
+  `RestExceptionHandler`, and the `config` package (`CarRentalConfiguration`/`FleetProperties`) wiring it
+  all together. This is the optional stage; next after this is `documentation`.
 
 ## Most Recent Decisions
 
-- Concurrency strategy: a dedicated lock object per configured `CarType` (not the enum constant itself —
-  avoids synchronizing on a value other code could also lock on), with each type's reservation list also
-  stored separately (`EnumMap<CarType, List<Reservation>>`). `reserve` synchronizes on the requested
-  type's lock for the whole check-then-record step. Chosen over a single global lock (would needlessly
-  serialize unrelated car types) and over lock-free/CAS (too complex to justify for this scope). Full
-  write-up in `docs/decisions/0002-use-per-car-type-locking-for-atomic-allocation.md`.
-- Concurrency tests race many threads (`ExecutorService` + `CountDownLatch` to maximize contention)
-  against the same car type and assert the exact success/rejection counts — one test with a single unit
-  (simplest case), one with `totalUnits = 3` and more attempts than capacity (stronger, more general
-  proof that the count-based rule holds under concurrency, not just the trivial single-unit case). Ran
-  the suite 5 times to rule out flakiness before committing.
-- `CarInventoryRepository` exposes one method, `reserve(carType, period)`, deliberately shaped as a
-  single atomic operation rather than split into separate read/write methods — splitting it would make
-  true atomicity impossible for a later implementation to retrofit, since the check-then-act gap would
-  already be baked into the port contract.
-- `ReservationService` is a thin delegate to the port — correct, not under-implemented: the atomic
-  decision belongs to the repository, so there's no orchestration logic left for the service to own at
-  this stage's scope (one use case, one port).
-- Tests exercise `ReservationService`/`InMemoryCarInventoryRepository` directly against each other — not
-  mocked. Codified in `.clinerules` Testing rules: prefer real, dependency-free collaborators over
-  Mockito.
-- Exception design: each exception builds its own message from raw constructor values, and maps to
-  exactly one invariant — codified in `.clinerules` Domain exception rules.
-- `var` used only when the type is apparent from the right-hand side — codified in `.clinerules` Code
-  style rules.
-- Tests use JUnit 5 `@Nested` classes grouped by method/behaviour under test, plain-sentence method names
-  inside — not method-name prefixes.
+- REST request shape is `{carType, start, days}` (mirrors `RentalPeriod` directly) rather than
+  `{carType, start, end}` — considered and decided against the date-range alternative: it would require
+  inventing a policy for non-whole-day gaps (reject? round and silently shift the return time?), which is
+  tangential to what this assignment grades, and the brief's own wording ("for a given number of days")
+  already matches the `days` shape.
+- `RestExceptionHandler` maps `CarUnavailableException`→409, `InvalidRentalPeriodException`→400, Bean
+  Validation/malformed-JSON failures→400, anything else→500 generic — all as
+  `ErrorResponse(errorId, code, message, details)`, never a raw exception name or stack trace.
+- Fleet sizes externalized via `FleetProperties` (`@ConfigurationProperties`) and `application.yml`
+  (`car-rental.fleet.*`) rather than hardcoded in `CarRentalConfiguration` — gives the previously-empty
+  `config` package a real purpose now that something needs Spring wiring.
+- `ReservationControllerTest` uses `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `TestRestTemplate`
+  against the real app context — no `MockMvc`, no mocked use case, consistent with the "prefer real
+  collaborators" testing philosophy from earlier stages. Fleet sizes pinned to 1 unit/type via
+  `@TestPropertySource` so capacity-exhaustion tests don't depend on production defaults.
+- Hit a real dependency gap: Spring Boot 4 split `TestRestTemplate` out of `spring-boot-test` into a new
+  `org.springframework.boot:spring-boot-resttestclient` module (package
+  `org.springframework.boot.resttestclient`), which itself needs `org.springframework.boot:spring-boot-restclient`
+  for `RestTemplateBuilder`, plus `@AutoConfigureTestRestTemplate` on the test class. Confirmed against
+  `~/workspace/playground/bet-settlement-trigger`, which hit and solved the same issue.
+- Manually verified the running app for real (`./gradlew bootJar` + `java -jar` + `curl`): success (201),
+  capacity exhaustion (409), validation failure (400), malformed enum (400) all behave as expected.
+- Concurrency strategy (from `in-memory-persistence`): a dedicated lock object per configured `CarType`,
+  with each type's reservation list stored separately. Full write-up in
+  `docs/decisions/0002-use-per-car-type-locking-for-atomic-allocation.md`.
 - Selected lightweight Hexagonal Architecture over plain layered — evaluated per `.clinerules`
   "Architecture rules", not defaulted; full rationale in
   `docs/decisions/0001-use-lightweight-hexagonal-architecture.md`.
-- Persistence: in-memory only, no DB/migrations, now concurrency-safe per car type.
-- No messaging, no secondary/mocked integrations — single synchronous use case.
-- No Testcontainers, Actuator, Micrometer, or MkDocs — none apply to this assignment's scope.
-- REST adapter is optional, deferred to its own later stage; the brief only requires unit tests.
+- No messaging, no secondary/mocked integrations. No Testcontainers, Actuator, Micrometer, or MkDocs.
 
 ## Branching Workflow
 
@@ -56,11 +51,11 @@
 
 ## Project Status
 
-Bootstrap, rules, architectural boundaries, the domain model, and the reservation use case are merged.
-Currently on `in-memory-persistence`, adding per-car-type locking, concurrency tests, and ADR 0002 to the
-existing `InMemoryCarInventoryRepository`. Next stage after this one is the optional `rest-api`, or
-straight to `documentation` if that's skipped. **Branch creation is the user's step, not Claude Code's**
-— implementation of the next stage begins only after the user creates and checks out that branch and
+Bootstrap, rules, architectural boundaries, the domain model, the reservation use case, and concurrency
+hardening are all merged. Currently on `rest-api`, implementing the minimal REST adapter. Next stage
+after this one is `documentation` (README, limitations/trade-offs, AI usage disclosure, "given more
+time") — the last planned stage. **Branch creation is the user's step, not Claude Code's** —
+implementation of the next stage begins only after the user creates and checks out that branch and
 confirms.
 
 ## Session Resumption Notes
