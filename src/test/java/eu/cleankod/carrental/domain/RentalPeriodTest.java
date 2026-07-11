@@ -56,7 +56,7 @@ class RentalPeriodTest {
             var period = new RentalPeriod(START, 3);
 
             // when
-            var end = period.endExclusive();
+            LocalDateTime end = period.endExclusive();
 
             // then
             assertThat(end).isEqualTo(START.plusDays(3));
