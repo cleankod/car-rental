@@ -1,0 +1,21 @@
+[versions]
+java = "25"
+spring-boot = "4.0.0"
+spring-dependency-management = "1.1.7"
+
+[libraries]
+spring-boot-starter-web = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
+# AssertJ and JUnit 5 come transitively via spring-boot-starter-test; no separate entry needed.
+# Version for spring-boot-starter-* is managed by the Spring Boot BOM (applied via the
+# io.spring.dependency-management plugin below) — do not pin it unless overriding the BOM for a
+# specific reason.
+#
+# No persistence/migrations/messaging/Testcontainers/Actuator/Micrometer entries: this assignment
+# uses plain in-memory collections with no DB, no broker, and no long-running service to monitor —
+# see "Technology stack" and "Technology choices — per assignment" in .clinerules.
+
+[plugins]
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+spring-dependency-management = { id = "io.spring.dependency-management", version.ref = "spring-dependency-management" }

@@ -1,0 +1,9 @@
+# App only: no broker, no database. This assignment uses plain in-memory collections with no
+# external integrations — see "Technology choices — per assignment" in .clinerules.
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker

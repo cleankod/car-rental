@@ -1,0 +1,360 @@
+# Car Rental — Project Rules for Cline
+
+This file is the single source of truth for both Cline and Claude Code — see `CLAUDE.md` at the repo
+root, which points back here instead of duplicating rules. If you edit rules, edit them here only.
+
+## Project identity
+
+- Project name: `car-rental` (kebab-case repo/module name)
+- Application name: `Car Rental` (human-readable name used in prose)
+- Application class: `CarRentalApplication`
+- Root package / module path: `eu.cleankod.carrental`
+- All packages/modules must start with `eu.cleankod.carrental`
+- Gradle group: `eu.cleankod`
+- Avoid unexplained abbreviations
+- README and any docs site must consistently refer to the service as `Car Rental`
+
+## Assignment scope
+
+Source: Charles River Development (State Street) technical assessment brief.
+
+Required behaviour, restated verbatim as bullet points:
+
+- The system should allow reservation of a car of a given type at a desired date and time for a given
+  number of days.
+- There are 3 types of cars: Sedan, SUV and van.
+- The number of cars of each type is limited.
+- Use unit tests to prove the system satisfies the requirements.
+
+Explicit framing from the brief:
+
+- "A production ready solution is not expected; an effort equivalent to approximately two hours should
+  be sufficient." Keep the implementation proportional to that time-box.
+- "We encourage you to focus on areas where you have the greatest expertise and can demonstrate depth
+  rather than breadth." Depth on the non-trivial areas below matters more than covering every possible
+  feature.
+- "Please clearly note any known limitations or tradeoffs in your solution." This is a graded
+  requirement, not an optional courtesy — the README must contain an explicit limitations/trade-offs
+  section.
+- AI-assisted tools are explicitly permitted; all design/implementation decisions are still mine to
+  explain in the interview. Document AI usage briefly in the README.
+- The brief describes a *simulated* system. This licenses simulating/in-memory persistence and skipping
+  real infrastructure — it does **not** license skipping the reservation behaviour itself, the limited
+  inventory constraint, overlap handling, or unit tests. Those four are the graded core.
+- The interview will ask me to explain technical decisions and reasoning, and to show depth in areas I
+  chose to invest in — decisions and trade-offs must be defensible out loud, not just present in code.
+
+The assignment names no endpoint paths, field names, or contracts to preserve verbatim — there is no
+prescribed API shape. Any REST surface is an optional convenience layer we add on top of the core
+use case (see "Architecture rules" and the REST API section below), not something the brief requires.
+
+## Technology stack
+
+<!-- Baseline — held across every assessment of this shape and safe to keep as-is. -->
+
+- Java 25
+- Spring Boot 4
+- **Gradle Groovy DSL** with version catalog (`settings.gradle`, `build.gradle`, `gradle/libs.versions.toml`)
+- JUnit 5
+- AssertJ
+- SLF4J with Logback
+- Docker Compose
+- Multi-stage Dockerfile
+
+Dropped from the reusable skeleton's baseline for this assignment specifically (see "Technology choices
+— per assignment" for why): Testcontainers, Micrometer, Spring Boot Actuator, MkDocs. None of them serve
+a purpose here — there is no container-backed dependency (DB/broker) to test against, no running service
+whose metrics/health would be meaningful to expose, and a single-page README is proportional to a
+two-hour take-home where MkDocs tooling would be pure ceremony.
+
+## Technology choices — per assignment
+
+- **Architecture pattern**: lightweight Hexagonal Architecture, package-by-feature, scoped down from the
+  full multi-adapter form. See "Architecture rules" below for the full evaluation against plain layered
+  — the short version: the classic Hexagonal trigger (multiple real integrations, one of them
+  mocked/swappable) does not strictly apply here, since there is exactly one real boundary (in-memory
+  inventory/reservation storage). What tips the choice is that "clear separation between domain
+  behaviour and infrastructure" is one of the assignment's explicitly named non-trivial areas to
+  demonstrate, and the concurrency-control mechanism (how atomicity is achieved) is exactly the kind of
+  thing worth hiding behind a port so the domain/use-case stays provably independent of it. The
+  incremental cost of a named port + one in-memory adapter over a plain interface + implementation is
+  effectively zero, so paying it for the clearer interview narrative is justified — but only in this
+  scoped-down form: no top-level `adapter.in`/`adapter.out` split for technologies that don't exist here
+  (messaging, secondary integrations), no `UseCase`-suffix ceremony beyond the one real use case.
+- **Persistence**: plain in-memory collections, guarded for thread safety. Nothing needs to survive a
+  restart or be queried relationally; a real database would be disproportionate infrastructure for a
+  simulated system the brief explicitly allows to simulate.
+- **Schema migrations**: none. There is no schema.
+- **Messaging**: none. The brief describes a single synchronous reservation operation, not an
+  event/queue-driven flow.
+- **Secondary/mocked integrations**: none. There is no second system to mock — the in-memory store *is*
+  the real (simulated) persistence for this system, not a stand-in for something else.
+- **REST adapter**: optional, minimal, decided at the dedicated stage (see "Branching workflow"). The
+  brief never asks for an HTTP API — "unit tests" are the explicit verification mechanism — so a REST
+  layer is a nice-to-have demonstration of the adapter boundary, added only if time remains after the
+  core use case and its tests are solid. It must not come at the expense of the graded core.
+- **Concurrency strategy**: deliberate design concern, not an afterthought. The in-memory inventory/
+  reservation store must guarantee that concurrent reservation attempts for the same car type and
+  overlapping window cannot both succeed when only one unit remains — see "Domain model rules" and the
+  dedicated concurrency stage.
+
+## Build rules
+
+- Use Gradle, not Maven.
+- Use: `settings.gradle`, `build.gradle`, `gradle/libs.versions.toml`, `./gradlew`
+- Do not generate `pom.xml`.
+- Do not use `./mvnw`.
+- Dependencies must be declared through the Gradle version catalog where practical.
+- Keep dependencies minimal and justified.
+- Do not add libraries only to look impressive.
+
+## Architecture rules
+
+- Choose an architecture pattern that fits the assignment's actual shape — do not default to
+  Hexagonal/Ports-and-Adapters out of habit; it's the right tool for some assignments and overkill for
+  others.
+  - **Hexagonal / Ports and Adapters** earns its cost when there are multiple real inbound/outbound
+    integrations and at least one is mocked or plausibly swappable. The port boundary is what makes the
+    mock honest.
+  - **Plain layered** (`controller` / `service` / `repository`) is more honest — and faster to build
+    and explain — for a single-integration, CRUD-shaped assignment. Don't invent ports/adapters
+    ceremony for one technology per side.
+  - **Selected for this assignment: lightweight Hexagonal**, evaluated (not defaulted) against plain
+    layered — recorded in `docs/decisions/0003-use-lightweight-hexagonal-architecture.md` once the
+    architecture stage lands. Honest accounting: this assignment has exactly one real outbound
+    integration (in-memory storage) and no mocked/swappable secondary system, which is the profile the
+    rule above assigns to plain layered. The deciding factor is that a named port + single in-memory
+    adapter costs almost nothing more than a plain interface + implementation, while buying a cleaner
+    interview narrative for two areas the brief explicitly calls out as worth demonstrating depth on:
+    domain/infrastructure separation, and isolating the concurrency-control mechanism from the business
+    rule it protects. If this project ever grows a second real integration, this choice pays for itself;
+    if not, the cost paid today is negligible. Kept deliberately *lightweight*: no adapter subtree for
+    technologies that don't exist here.
+- Prefer boring, explicit code over clever code, regardless of pattern.
+- Keep the design easy to explain in an interview.
+- Do not use CQRS, event sourcing, sagas, multi-module Gradle, or outbox pattern unless explicitly approved.
+- Document such patterns as future improvements where appropriate.
+
+### Hexagonal Architecture / Ports and Adapters (selected)
+
+- Keep the domain pure and framework-free.
+- Domain must not depend on: Spring, JDBC, REST/web APIs.
+- Ports belong in the application layer, not in the domain layer.
+- Because this assignment has a single cohesive feature (car reservation), package-by-feature collapses
+  to a root-level split — a nested `reservation/` feature package would be redundant ceremony for one
+  feature. Use this package layout:
+
+```
+eu.cleankod.carrental
+  domain                  -- Car, CarType, Reservation, RentalPeriod, domain exceptions
+  application
+    port
+      in                  -- ReserveCarUseCase
+      out                 -- CarInventoryRepository
+    (service impl)        -- ReservationService implementing the in-port, depending on the out-port
+  adapter
+    in
+      rest                -- optional, minimal — only if the REST stage is implemented
+    out
+      persistence          -- thread-safe in-memory CarInventoryRepository implementation
+  config                   -- Spring @Configuration / bean wiring, if any is needed
+```
+
+- Use `adapter`, not `infrastructure`, as the package segment.
+- Do not introduce abstractions before there are at least two concrete reasons, except for ports that
+  protect external boundaries (the repository port is the one deliberate exception here — see
+  "Architecture pattern" above for why).
+
+## Domain exception rules
+
+- Domain invariant violations must throw custom domain exceptions (subclasses of `RuntimeException` in
+  the `domain` package).
+- Do not throw `IllegalStateException`, `IllegalArgumentException`, or other generic JDK exceptions for
+  domain rule violations.
+- Custom domain exceptions are named after the violated invariant, e.g. `CarUnavailableException`
+  (no unit of the requested type is free for the requested period), `InvalidRentalPeriodException`
+  (the requested period itself is malformed — e.g. non-positive duration).
+- Exception messages must identify the affected car type/period and describe the violated invariant.
+- Domain exceptions should be handled in a global exception handler in the adapter layer, if/when the
+  REST adapter exists; until then, callers (tests, or a future adapter) catch them directly.
+- Domain methods must not catch domain exceptions — no try/catch inside domain classes.
+
+## Domain model rules
+
+- Domain objects should be immutable or mostly immutable.
+- Prefer records where they improve clarity.
+- Do not make domain objects mutable only for persistence convenience.
+- Domain should model: `CarType` (enum: `SEDAN`, `SUV`, `VAN`), `RentalPeriod` (start date/time + number
+  of days, with explicit, tested boundary semantics for what counts as overlapping), `Reservation`
+  (a car type, a rental period, and enough identity to distinguish it from other reservations), and the
+  inventory/allocation concept that enforces the limited-quantity constraint per `CarType`.
+- Core business rule: a reservation for a given `CarType` and `RentalPeriod` may only succeed if at
+  least one unit of that type is not already reserved for an overlapping period; the total units per
+  type is fixed and limited. This is the rule the overlap-detection and allocation logic exists to
+  enforce — get the boundary semantics (does a reservation ending on day N conflict with one starting on
+  day N?) and the overlap test explicit and deliberate, not accidental.
+- Concurrency requirement, stated explicitly in place of a messaging-style idempotency requirement (this
+  system has no message redelivery to guard against): concurrent reservation attempts for the same car
+  type and an overlapping period must not both succeed when only one matching unit remains available —
+  the allocation step must be atomic. Do not claim thread-safety of the reservation flow unless it is
+  actually exercised by a concurrent test.
+
+## Application / service layer rules
+
+- Application services orchestrate use cases; keep them small, explicit, and readable.
+- Application services may depend on ports/interfaces and domain classes, not on adapter technologies
+  directly.
+- Name the inbound port after the use case (suffix `UseCase`) and the outbound port after the capability
+  (suffix `Repository`):
+  - `ReserveCarUseCase` — the one inbound use case; called by tests directly and, if the REST stage is
+    implemented, by the REST controller.
+  - `CarInventoryRepository` — outbound port for checking availability and recording a reservation.
+- Do not add further `UseCase`/`Port` ceremony beyond these two — there is one operation in scope.
+
+## Persistence rules
+
+- In-memory collections only, guarded for thread safety (see "Concurrency strategy" above) — no
+  database, no ORM, nothing to migrate.
+- Persistence adapter belongs under `eu.cleankod.carrental.adapter.out.persistence`.
+- Persistence adapter classes may use whatever concurrency-control mechanism is chosen (e.g. per-type
+  locking, compare-and-swap, or synchronized allocation) — that choice is deliberately hidden behind
+  `CarInventoryRepository` so the domain/application layers do not know or care how atomicity is
+  achieved.
+
+## REST API rules
+
+<!-- Applies only if the optional REST stage is implemented. If unit tests alone are judged sufficient
+     to demonstrate the requirements within the two-hour scope, skip this section and this stage
+     entirely — the brief only requires unit tests, not an HTTP API. -->
+
+- Endpoint(s), input fields, and status codes are to be decided at the REST stage, not before — recorded
+  here once implemented, and in `techContext.md`.
+- Validate input using Bean Validation.
+- Return the appropriate success status (e.g. `201 Created` for a synchronous reservation) — pick
+  deliberately, don't default to `200`.
+- Implement global error handling; map domain exceptions to client-facing error responses.
+- Error responses should contain: `errorId`, `code`, `message`, `details` where useful.
+- Do not leak internal exception names or stack traces.
+
+## Observability rules
+
+- Use SLF4J with Logback for whatever logging is genuinely useful (e.g. logging a rejected reservation
+  attempt with its reason).
+- Micrometer, Spring Boot Actuator, and any other metrics/tracing stack are explicitly out of scope —
+  there is no long-running service here for them to monitor meaningfully, and adding them would be
+  infrastructure for its own sake in a two-hour take-home.
+
+## Testing rules
+
+- Unit tests are the primary and sufficient verification mechanism — this is what the brief explicitly
+  asks for. No Testcontainers, no DB/broker integration tests: there is nothing external to integrate
+  with.
+- Use JUnit 5 and AssertJ.
+- Tests should use given/when/then comments.
+- Mockito only where a test double genuinely clarifies a unit test of orchestration logic (e.g. testing
+  `ReservationService` against a fake/mocked `CarInventoryRepository`) — do not mock the domain itself.
+- Test at least: a reservation succeeds when a unit of the requested type is available for the whole
+  period; a reservation is rejected when no unit of that type remains available; overlapping periods for
+  the same type are correctly detected and rejected; the boundary case where two periods touch but don't
+  truly overlap is deliberately tested one way or the other, not left accidental; and — the concurrency
+  requirement — when only one unit remains, concurrent reservation attempts for an overlapping period
+  result in exactly one success and the rest rejected.
+- Exception assertions must use `catchThrowable`: call `catchThrowable(...)` in the `// when` section,
+  assign the result to a variable, and assert on it in the `// then` section. Never use
+  `assertThatThrownBy(...)` or `assertThatExceptionOfType(...)`.
+
+## Docker rules
+
+- Provide a multi-stage Dockerfile and a Docker Compose file that runs the app only — no broker, no
+  database container, since none exist in this design. These exist mainly so the optional REST adapter
+  (if built) can be demoed; they are not required to prove the assignment's requirements, which unit
+  tests already do.
+
+## Documentation rules
+
+- Provide a README (created fresh at the start of real project work, not copied from the skeleton).
+- README must explain: assignment summary, prerequisites, quick start, running tests, architecture
+  overview (including why lightweight Hexagonal was chosen over plain layered), the concurrency
+  approach and how it's tested, known limitations and trade-offs (explicitly required by the brief), AI
+  usage disclosure, and a "given more time" section.
+- README commands must be copy-paste verified before submission.
+- Documentation must not overpromise features.
+- "Given more time" must not include things essential for the assignment (i.e. must not be used to wave
+  away the graded core: reservation flow, limited inventory, overlap handling, unit tests).
+
+## Architecture Decision Records
+
+- Location: `docs/decisions/`, sequentially numbered, e.g. `0001-use-java-25.md`,
+  `0002-use-gradle-with-groovy-dsl.md`, `0003-use-lightweight-hexagonal-architecture.md`.
+- Each ADR must include: title, status, context, decision drivers, considered options, advantages and
+  disadvantages of each meaningful option, selected decision, rationale, consequences, known limitations
+  or risks.
+- Do not create ADRs for trivial naming choices or mechanical implementation details.
+- Create ADRs together with the stage in which the relevant decision is made — do not front-load future
+  ADRs during an earlier stage.
+- Every stage that makes a significant decision must create or update the relevant ADR(s) as part of
+  that stage's own commits, before the stage is considered complete.
+
+## Commit rules
+
+- One meaningful commit per coherent change.
+- Do not batch unrelated changes.
+- Commit message format: short one-line summary explaining what and why; optional extended body if useful.
+- Preferred commit sequence, one group per stage (see "Branching workflow" for the matching branches):
+  1. `docs: define project rules and implementation plan`
+  2. `chore: establish architectural boundaries` (package skeleton + ADR 0003)
+  3. `feat: implement car rental domain model` (`CarType`, `RentalPeriod`, `Reservation`, domain
+     exceptions, overlap/boundary semantics + unit tests)
+  4. `feat: implement car reservation use case` (`ReserveCarUseCase`, `ReservationService`,
+     `CarInventoryRepository` port + unit tests against a fake repository)
+  5. `feat: add thread-safe in-memory reservation storage` (concrete `CarInventoryRepository`, atomic
+     allocation, concurrency tests + ADR on the concurrency strategy)
+  6. `feat: expose reservation REST API` (only if this stage is undertaken)
+  7. `docs: finalize assessment documentation` (README, limitations/trade-offs, AI usage disclosure,
+     "given more time")
+- Do not proceed to the next commit if current tests/build are broken.
+
+## Branching workflow
+
+- No direct commits to `master`/`main`.
+- Each logical stage has its own feature branch.
+- Branch naming pattern: `kebab-case` describing the stage:
+  - `project-rules`
+  - `architecture-boundaries`
+  - `domain-model`
+  - `reservation-use-case`
+  - `in-memory-persistence`
+  - `rest-api` (optional — only if undertaken)
+  - `documentation`
+- Workflow per stage:
+  1. User creates the branch and tells Claude Code.
+  2. Claude Code implements the stage with individual commits, including any ADR(s) for that stage's
+     decisions.
+  3. User pushes, reviews, requests fixes if needed.
+  4. User merges to `master`/`main`.
+  5. User pulls `master`/`main` and tells Claude Code.
+  6. Claude Code acknowledges and suggests the next branch name.
+  7. Go to step 1.
+
+## Memory bank
+
+- Memory bank lives in `.cline/` and must be kept up to date.
+- After completing each branch/stage, update these files before committing:
+  - `progress.md` — mark the stage as completed, add any new stages discovered
+  - `activeContext.md` — update current state, recent decisions, next steps
+- After significant design decisions, update `techContext.md` if the tech context changed.
+- Memory bank updates must be included in the branch's own commits, not as a separate branch.
+- When resuming after an interruption, read `activeContext.md` first, then `progress.md`.
+
+## Out of scope (document as future improvements)
+
+- Persisting reservations beyond process memory (a real database)
+- A REST API, if the optional stage is not undertaken (or, if it is, anything beyond a minimal
+  synchronous create-reservation endpoint — auth, rate limiting, pagination, etc.)
+- Cancelling/modifying an existing reservation (the brief only asks for creating one)
+- Pricing/billing
+- Full observability stack (metrics, tracing)
+- CI/CD pipeline
+- Kubernetes / Helm
+- Authentication / authorization
+- Event sourcing / CQRS / sagas / messaging of any kind

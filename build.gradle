@@ -1,0 +1,34 @@
+plugins {
+    id 'java'
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+}
+
+group = 'eu.cleankod'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    // web + validation stay in even though the REST adapter is optional (deferred to its own stage) —
+    // Spring Boot needs no persistence/messaging deps here: this project uses plain in-memory
+    // collections, no DB, no broker. Actuator/Micrometer and Testcontainers were dropped from the
+    // skeleton baseline: no long-running service to monitor, and nothing container-backed to test
+    // against — see "Technology stack" in .clinerules.
+    implementation libs.spring.boot.starter.web
+    implementation libs.spring.boot.starter.validation
+
+    testImplementation libs.spring.boot.starter.test
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
