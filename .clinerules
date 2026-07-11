@@ -97,6 +97,13 @@ ceremony.
   overlapping window cannot both succeed when only one unit remains — see "Domain model rules" and the
   dedicated concurrency stage.
 
+## Code style rules
+
+- Use `var` only when the type is apparent from the right-hand side without checking another
+  declaration (e.g. `new RentalPeriod(...)`, `catchThrowable(...)`). If the type comes from a method
+  whose name doesn't announce its return type on its own (e.g. `repository.reserve(...)`), or from a
+  stream/lookup chain, use an explicit type instead.
+
 ## Build rules
 
 - Use Gradle, not Maven.
@@ -265,8 +272,16 @@ eu.cleankod.carrental
   class, an `Overlaps` class), with plain-sentence method names inside each (`isTrueWhen...`), rather
   than prefixing every method name with the thing being tested.
 - Tests should use given/when/then comments.
-- Mockito only where a test double genuinely clarifies a unit test of orchestration logic (e.g. testing
-  `ReservationService` against a fake/mocked `CarInventoryRepository`) — do not mock the domain itself.
+- Prefer testing application services through their real port implementation (e.g.
+  `ReservationService` against the real `InMemoryCarInventoryRepository`) over mocking the port — the
+  real in-memory implementation has no external dependencies, so there's no cost to using it directly,
+  and it avoids a hand-rolled test double duplicating logic the real adapter already has. Reserve
+  Mockito for cases where constructing a real collaborator genuinely isn't practical; do not mock the
+  domain itself.
+- Avoid duplicating the same scenario at multiple layers: put exhaustive capacity/overlap coverage on
+  the class that actually implements the rule (`CarTypeInventoryTest`, `InMemoryCarInventoryRepositoryTest`)
+  and keep tests of a thin delegator (e.g. `ReservationServiceTest`) limited to confirming the wiring
+  (a representative success case and a representative failure case), not re-deriving every edge case.
 - Test at least: a reservation succeeds when a unit of the requested type is available for the whole
   period; a reservation is rejected when no unit of that type remains available; overlapping periods for
   the same type are correctly detected and rejected; the boundary case where two periods touch but don't

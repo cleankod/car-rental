@@ -10,7 +10,7 @@
 | Persistence | Plain in-memory collections, thread-safe (no DB — simulated system, nothing needs to survive a restart) |
 | Migrations | None — no schema |
 | Messaging | None — single synchronous operation, not event/queue-driven |
-| Testing | JUnit 5, AssertJ, (Mockito only where a fake genuinely clarifies a unit test) |
+| Testing | JUnit 5, AssertJ — prefer real, dependency-free collaborators (e.g. `InMemoryCarInventoryRepository`) over Mockito |
 | Observability | SLF4J + Logback only — Actuator/Micrometer deliberately dropped, no long-running service to monitor |
 | Docs | Plain README (no MkDocs — disproportionate for a 2-hour take-home) |
 
@@ -39,7 +39,7 @@ eu.cleankod.carrental
     in
       rest                -- optional, minimal — only if the REST stage is implemented
     out
-      persistence          -- thread-safe in-memory CarInventoryRepository implementation
+      persistence          -- InMemoryCarInventoryRepository (concurrency-safety added in a later stage)
   config                   -- Spring @Configuration / bean wiring, if any is needed
 ```
 
@@ -67,14 +67,23 @@ eu.cleankod.carrental
 
 ## Application Ports / Services
 
-<!-- Not yet implemented — lands in the reservation-use-case stage. -->
-
 **Inbound:**
-- `ReserveCarUseCase` — the one use case; called by tests and, if built, the REST controller
+- `ReserveCarUseCase` — the one use case; called by tests and, if built, the REST controller.
+- `ReservationService` implements it as a thin delegate to `CarInventoryRepository` — it has no logic of
+  its own beyond wiring, since the atomic check-and-record decision belongs entirely to the repository.
 
 **Outbound:**
-- `CarInventoryRepository` → thread-safe in-memory implementation, using `CarTypeInventory.hasCapacityFor`
-  against whatever reservations it currently holds for that type
+- `CarInventoryRepository` — a single method, `reserve(carType, period)`, deliberately atomic-shaped
+  rather than split into separate read/write methods: splitting it would make true atomicity impossible
+  for a later implementation to add, since the check-then-act gap would already be baked into the port
+  contract.
+- `InMemoryCarInventoryRepository` (`adapter.out.persistence`) — the real (not test-double) implementation:
+  holds a `CarTypeInventory` per `CarType` plus the reservations accepted so far, and applies
+  `CarTypeInventory.hasCapacityFor` to decide. **Not yet concurrency-safe** — two racing `reserve` calls
+  for the last unit of a type can both observe "capacity available" before either records its
+  reservation. Hardening this same class for concurrency is the `in-memory-persistence` stage's job.
+- Tests exercise `ReservationService` and `InMemoryCarInventoryRepository` directly (real collaborators,
+  not mocks) — see "Testing rules" in `.clinerules` for why.
 
 ## Key Decisions
 
