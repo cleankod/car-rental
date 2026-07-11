@@ -1,6 +1,3 @@
 spring:
   application:
     name: car-rental
-
-# No datasource, migration tool, or messaging config — this assignment uses plain in-memory
-# collections only. No Actuator exposure either — see "Technology stack" in .clinerules.

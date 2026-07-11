@@ -1,5 +1,3 @@
-# App only: no broker, no database. This assignment uses plain in-memory collections with no
-# external integrations — see "Technology choices — per assignment" in .clinerules.
 services:
   app:
     build: .

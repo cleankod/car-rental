@@ -14,8 +14,7 @@
   lands) `docs/decisions/0003-use-lightweight-hexagonal-architecture.md`.
 - Persistence: in-memory only, thread-safe, no DB/migrations.
 - No messaging, no secondary/mocked integrations — single synchronous use case.
-- Dropped Testcontainers, Actuator, Micrometer, MkDocs from the skeleton's baseline stack — none apply to
-  this assignment's scope.
+- No Testcontainers, Actuator, Micrometer, or MkDocs — none apply to this assignment's scope.
 - REST adapter is optional, deferred to its own later stage; the brief only requires unit tests.
 
 ## Branching Workflow

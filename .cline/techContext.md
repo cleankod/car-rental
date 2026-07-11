@@ -69,6 +69,6 @@ eu.cleankod.carrental
 - In-memory persistence only, no DB/migrations — assignment is explicitly simulated and nothing needs to
   survive a restart.
 - No messaging — single synchronous operation.
-- Testcontainers, Actuator, Micrometer, MkDocs dropped from the skeleton baseline — none serve a purpose
-  for this assignment's scope (see "Technology stack" in `.clinerules` for why).
+- No Testcontainers, Actuator, Micrometer, or MkDocs — none serve a purpose for this assignment's scope
+  (see "Technology stack" in `.clinerules` for why).
 - REST adapter is optional and deferred to its own stage — the brief only requires unit tests.

@@ -61,11 +61,10 @@ use case (see "Architecture rules" and the REST API section below), not somethin
 - Docker Compose
 - Multi-stage Dockerfile
 
-Dropped from the reusable skeleton's baseline for this assignment specifically (see "Technology choices
-— per assignment" for why): Testcontainers, Micrometer, Spring Boot Actuator, MkDocs. None of them serve
-a purpose here — there is no container-backed dependency (DB/broker) to test against, no running service
-whose metrics/health would be meaningful to expose, and a single-page README is proportional to a
-two-hour take-home where MkDocs tooling would be pure ceremony.
+No Testcontainers, Micrometer, Spring Boot Actuator, or MkDocs: there is no container-backed dependency
+(DB/broker) to test against, no running service whose metrics/health would be meaningful to expose, and
+a single-page README is proportional to a two-hour take-home where MkDocs tooling would be pure
+ceremony.
 
 ## Technology choices — per assignment
 
