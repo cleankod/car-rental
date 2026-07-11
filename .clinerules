@@ -119,8 +119,8 @@ ceremony.
     and explain — for a single-integration, CRUD-shaped assignment. Don't invent ports/adapters
     ceremony for one technology per side.
   - **Selected for this assignment: lightweight Hexagonal**, evaluated (not defaulted) against plain
-    layered — recorded in `docs/decisions/0003-use-lightweight-hexagonal-architecture.md` once the
-    architecture stage lands. Honest accounting: this assignment has exactly one real outbound
+    layered — recorded in `docs/decisions/0001-use-lightweight-hexagonal-architecture.md`.
+    Honest accounting: this assignment has exactly one real outbound
     integration (in-memory storage) and no mocked/swappable secondary system, which is the profile the
     rule above assigns to plain layered. The deciding factor is that a named port + single in-memory
     adapter costs almost nothing more than a plain interface + implementation, while buying a cleaner
@@ -302,8 +302,9 @@ eu.cleankod.carrental
 
 ## Architecture Decision Records
 
-- Location: `docs/decisions/`, sequentially numbered, e.g. `0001-use-java-25.md`,
-  `0002-use-gradle-with-groovy-dsl.md`, `0003-use-lightweight-hexagonal-architecture.md`.
+- Location: `docs/decisions/`, sequentially numbered, e.g. `0001-use-lightweight-hexagonal-architecture.md`.
+  Numbering starts at the first decision that actually earns an ADR — Java 25 and Gradle Groovy DSL were
+  fixed inputs to this assignment, not evaluated choices, so they don't get one (see the exclusion below).
 - Each ADR must include: title, status, context, decision drivers, considered options, advantages and
   disadvantages of each meaningful option, selected decision, rationale, consequences, known limitations
   or risks.
@@ -320,7 +321,7 @@ eu.cleankod.carrental
 - Commit message format: short one-line summary explaining what and why; optional extended body if useful.
 - Preferred commit sequence, one group per stage (see "Branching workflow" for the matching branches):
   1. `docs: define project rules and implementation plan`
-  2. `chore: establish architectural boundaries` (package skeleton + ADR 0003)
+  2. `chore: establish architectural boundaries` (package skeleton + ADR 0001)
   3. `feat: implement car rental domain model` (`CarType`, `RentalPeriod`, `Reservation`, domain
      exceptions, overlap/boundary semantics + unit tests)
   4. `feat: implement car reservation use case` (`ReserveCarUseCase`, `ReservationService`,

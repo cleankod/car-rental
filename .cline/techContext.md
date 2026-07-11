@@ -25,7 +25,7 @@ interface + implementation, and buys a clean separation between the reservation 
 concurrency-control mechanism that enforces it — both explicitly named as areas to demonstrate depth on
 in the brief. Kept deliberately lightweight: no adapter subtree for messaging/secondary integrations that
 don't exist here, no multi-`UseCase` ceremony beyond the single real use case. Full rationale recorded in
-`docs/decisions/0003-use-lightweight-hexagonal-architecture.md` once the architecture stage lands.
+`docs/decisions/0001-use-lightweight-hexagonal-architecture.md`.
 
 ```
 eu.cleankod.carrental

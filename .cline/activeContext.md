@@ -2,16 +2,21 @@
 
 ## Current State
 
-- Branch: `master`
-- Based on: fresh bootstrap from `~/workspace/playground/recruitment-assessment-skeleton/`, no commits yet
-- Task: bootstrap is complete. No domain or feature implementation has started. No commits have been
-  made to this repository yet.
+- Branch: `architecture-boundaries`
+- Based on: `master` after `project-scaffolding` was merged (PR #1)
+- Task: establishing the package skeleton and ADR 0001 for the architecture stage. No domain/feature
+  behaviour implemented yet — that starts in `domain-model`.
 
 ## Most Recent Decisions
 
 - Selected lightweight Hexagonal Architecture over plain layered — evaluated per `.clinerules`
-  "Architecture rules", not defaulted; full rationale in `.clinerules` and (once the architecture stage
-  lands) `docs/decisions/0003-use-lightweight-hexagonal-architecture.md`.
+  "Architecture rules", not defaulted; full rationale now recorded in
+  `docs/decisions/0001-use-lightweight-hexagonal-architecture.md`.
+- Package skeleton created: `domain`, `application` (+ `port.in`, `port.out`), `adapter.out.persistence`
+  — each a `package-info.java` only, no classes yet. `config` and `adapter.in.rest` deliberately not
+  created yet — nothing needs Spring wiring or a REST adapter until later stages.
+- ADR numbering starts at `0001` for this decision — Java 25 and Gradle Groovy DSL were fixed inputs to
+  the assignment, not evaluated choices, so they don't get ADRs of their own.
 - Persistence: in-memory only, thread-safe, no DB/migrations.
 - No messaging, no secondary/mocked integrations — single synchronous use case.
 - No Testcontainers, Actuator, Micrometer, or MkDocs — none apply to this assignment's scope.
@@ -28,9 +33,10 @@
 
 ## Project Status
 
-Bootstrap is complete: rules, memory bank, and Gradle scaffold are in place and build green. The next
-stage is `project-rules`. **Do not create that branch — the user creates it manually.** Implementation
-begins only after the user confirms the correct branch is checked out.
+Bootstrap and rules are merged. Currently on `architecture-boundaries`, adding the package skeleton and
+ADR 0001. Next stage after this one is `domain-model`. **Branch creation is the user's step, not
+Claude Code's** — implementation of the next stage begins only after the user creates and checks out
+that branch and confirms.
 
 ## Session Resumption Notes
 
