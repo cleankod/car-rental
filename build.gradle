@@ -1,0 +1,34 @@
+plugins {
+    id 'java'
+    alias(libs.plugins.spring.boot)
+    alias(libs.plugins.spring.dependency.management)
+}
+
+group = 'eu.cleankod'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation libs.spring.boot.starter.web
+    implementation libs.spring.boot.starter.validation
+
+    testImplementation libs.spring.boot.starter.test
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Exactly one jar in build/libs (the boot jar), so the Dockerfile's wildcard COPY is unambiguous.
+tasks.named('jar') {
+    enabled = false
+}
