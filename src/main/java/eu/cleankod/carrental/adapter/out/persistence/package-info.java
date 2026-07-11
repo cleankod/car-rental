@@ -1,7 +1,6 @@
 /**
  * In-memory implementation of the outbound persistence port — no external database, per this
- * assignment's decision to simulate persistence rather than stand up a real one. Concurrency-safety
- * (atomic allocation under concurrent reservation attempts) is added in the {@code in-memory-persistence}
- * stage, not here.
+ * assignment's decision to simulate persistence rather than stand up a real one. Concurrency-safe per
+ * car type: see {@link InMemoryCarInventoryRepository} for the locking strategy.
  */
 package eu.cleankod.carrental.adapter.out.persistence;
