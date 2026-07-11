@@ -1,0 +1,23 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Root-only build output directory. Deliberately anchored ("/out/", not "out/") —
+# a bare "out/" glob would also match e.g. "adapter/out/" if Hexagonal Architecture
+# is chosen for this assignment, silently excluding real source packages.
+/out/
+
+# MkDocs (if used)
+site/
