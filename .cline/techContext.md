@@ -72,3 +72,8 @@ eu.cleankod.carrental
 - No Testcontainers, Actuator, Micrometer, or MkDocs — none serve a purpose for this assignment's scope
   (see "Technology stack" in `.clinerules` for why).
 - REST adapter is optional and deferred to its own stage — the brief only requires unit tests.
+- Dockerfile extracts the boot jar into Spring Boot's layers (`dependencies`/`spring-boot-loader`/
+  `snapshot-dependencies`/`application`) instead of copying the fat jar as one layer, so code-only
+  changes don't invalidate the cached dependency layer; runs as a non-root user. Plain `jar` task
+  disabled in `build.gradle` so the Dockerfile's wildcard jar `COPY` stays unambiguous. See "Docker
+  rules" in `.clinerules` — a Docker-construction detail, not a stack decision, so no ADR.
