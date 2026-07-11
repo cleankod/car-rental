@@ -39,7 +39,7 @@ eu.cleankod.carrental
     in
       rest                -- optional, minimal — only if the REST stage is implemented
     out
-      persistence          -- InMemoryCarInventoryRepository (concurrency-safety added in a later stage)
+      persistence          -- InMemoryCarInventoryRepository (concurrency-safe: per-car-type locking)
   config                   -- Spring @Configuration / bean wiring, if any is needed
 ```
 
@@ -78,15 +78,21 @@ eu.cleankod.carrental
   for a later implementation to add, since the check-then-act gap would already be baked into the port
   contract.
 - `InMemoryCarInventoryRepository` (`adapter.out.persistence`) — the real (not test-double) implementation:
-  holds a `CarTypeInventory` per `CarType` plus the reservations accepted so far, and applies
-  `CarTypeInventory.hasCapacityFor` to decide. **Not yet concurrency-safe** — two racing `reserve` calls
-  for the last unit of a type can both observe "capacity available" before either records its
-  reservation. Hardening this same class for concurrency is the `in-memory-persistence` stage's job.
+  holds a `CarTypeInventory`, a reservation list, and a dedicated lock object per `CarType` (all fixed at
+  construction). `reserve` synchronizes on the requested type's lock for the whole check-then-record
+  step, so concurrent attempts for the *same* type are serialized (no overbooking) while attempts for
+  *different* types never contend. See
+  `docs/decisions/0002-use-per-car-type-locking-for-atomic-allocation.md` for the alternatives considered
+  (single global lock, lock-free/CAS) and why per-type locking was chosen.
 - Tests exercise `ReservationService` and `InMemoryCarInventoryRepository` directly (real collaborators,
   not mocks) — see "Testing rules" in `.clinerules` for why.
+  `InMemoryCarInventoryRepositoryConcurrencyTest` races many threads for the same car type and asserts
+  exactly `totalUnits` succeed and the rest are rejected, proving the atomicity property directly.
 
 ## Key Decisions
 
+- Per-car-type locking (dedicated lock object per `CarType`, not the enum constant itself) for atomic
+  allocation, over a single global lock or lock-free/CAS — see ADR 0002.
 - Lightweight Hexagonal over plain layered — see "Architecture" above and `.clinerules`.
 - In-memory persistence only, no DB/migrations — assignment is explicitly simulated and nothing needs to
   survive a restart.

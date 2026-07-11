@@ -17,34 +17,40 @@ import java.util.Map;
  * and the reservations accepted so far, and applies {@link CarTypeInventory#hasCapacityFor} to decide
  * whether a new reservation fits.
  *
- * <p><strong>Not yet concurrency-safe.</strong> Two overlapping {@code reserve} calls racing for the
- * last available unit of a type can both read "capacity available" before either records its
- * reservation. Making the check-and-record step atomic is the {@code in-memory-persistence} stage's
- * job, not this one.
+ * <p>Concurrency-safe per car type: {@code reserve} synchronizes on a dedicated lock object for the
+ * requested {@link CarType}, so the whole check-then-record step is atomic for that type — concurrent
+ * attempts for the same type are serialized, but attempts for different types never contend with each
+ * other, since both the reservation lists and the locks are partitioned per type. See
+ * {@code docs/decisions/0002-use-per-car-type-locking-for-atomic-allocation.md} for the alternatives
+ * considered and why.
  */
 public class InMemoryCarInventoryRepository implements CarInventoryRepository {
 
     private final Map<CarType, CarTypeInventory> inventoriesByType = new EnumMap<>(CarType.class);
-    private final List<Reservation> reservations = new ArrayList<>();
+    private final Map<CarType, List<Reservation>> reservationsByType = new EnumMap<>(CarType.class);
+    private final Map<CarType, Object> locksByType = new EnumMap<>(CarType.class);
 
     public InMemoryCarInventoryRepository(CarTypeInventory... inventories) {
         for (CarTypeInventory inventory : inventories) {
-            inventoriesByType.put(inventory.carType(), inventory);
+            CarType carType = inventory.carType();
+            inventoriesByType.put(carType, inventory);
+            reservationsByType.put(carType, new ArrayList<>());
+            locksByType.put(carType, new Object());
         }
     }
 
     @Override
     public Reservation reserve(CarType carType, RentalPeriod period) {
-        CarTypeInventory inventory = inventoriesByType.get(carType);
-        List<RentalPeriod> existingPeriods = reservations.stream()
-                .filter(reservation -> reservation.carType() == carType)
-                .map(Reservation::period)
-                .toList();
-        if (!inventory.hasCapacityFor(existingPeriods, period)) {
-            throw new CarUnavailableException(carType, period);
+        synchronized (locksByType.get(carType)) {
+            CarTypeInventory inventory = inventoriesByType.get(carType);
+            List<Reservation> existingReservations = reservationsByType.get(carType);
+            List<RentalPeriod> existingPeriods = existingReservations.stream().map(Reservation::period).toList();
+            if (!inventory.hasCapacityFor(existingPeriods, period)) {
+                throw new CarUnavailableException(carType, period);
+            }
+            Reservation reservation = Reservation.of(carType, period);
+            existingReservations.add(reservation);
+            return reservation;
         }
-        Reservation reservation = Reservation.of(carType, period);
-        reservations.add(reservation);
-        return reservation;
     }
 }
