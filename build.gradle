@@ -27,3 +27,8 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+// Exactly one jar in build/libs (the boot jar), so the Dockerfile's wildcard COPY is unambiguous.
+tasks.named('jar') {
+    enabled = false
+}
