@@ -268,15 +268,20 @@ eu.cleankod.carrental
   database container, since none exist in this design. These exist mainly so the optional REST adapter
   (if built) can be demoed; they are not required to prove the assignment's requirements, which unit
   tests already do.
-- The Dockerfile builds the boot jar with Gradle, then extracts it into Spring Boot's layer directories
-  (`dependencies`, `spring-boot-loader`, `snapshot-dependencies`, `application` — via
+- The Dockerfile does not build the jar — it packages a jar that must already exist in `build/libs`
+  (run `./gradlew bootJar` on the host or in a CI build step first). This mirrors how a real CI pipeline
+  is shaped (compile/test in one stage, package/publish the image in another) and keeps the image build
+  itself fast and independent of the Gradle/JDK toolchain. `.dockerignore` sends only `build/libs/*.jar`
+  into the build context, not the source tree.
+- The Dockerfile then extracts that jar into Spring Boot's layer directories (`dependencies`,
+  `spring-boot-loader`, `snapshot-dependencies`, `application` — via
   `java -Djarmode=tools -jar application.jar extract --layers`) in a dedicated stage, and assembles the
   runtime image from those layers ordered least- to most-changing. Rationale: a plain `COPY *.jar` puts
   the whole fat jar (all dependencies + app code) in one layer, so any code change invalidates and
   re-uploads the entire thing; splitting by Spring Boot's own layer boundaries means a code-only change
   only touches the small `application` layer, reusing the cached (and much larger) `dependencies` layer.
-  This mirrors a pattern already used in another project of mine and costs one extra build stage — not
-  a stack decision, just a Docker-image-construction detail, so no ADR.
+  This mirrors a pattern already used in another project of mine — a Docker-image-construction detail,
+  not a stack decision, so no ADR.
 - Disable the plain `jar` task (`tasks.named('jar') { enabled = false }` in `build.gradle`) so
   `build/libs/` contains exactly one jar (the boot jar) — otherwise the Dockerfile's wildcard
   `COPY *.jar` is ambiguous between the plain and boot jars and Docker refuses the build.

@@ -1,20 +1,12 @@
 # syntax=docker/dockerfile:1
 
-FROM eclipse-temurin:25-jdk AS build
-WORKDIR /workspace
-
-COPY gradlew ./
-COPY gradle gradle
-COPY settings.gradle build.gradle ./
-RUN chmod +x gradlew
-
-COPY src src
-RUN ./gradlew --no-daemon bootJar
+# The jar must already exist in build/libs (host/CI: ./gradlew bootJar) — this Dockerfile only
+# packages it, it does not build it.
 
 # Extract the boot jar into layers for better Docker layer caching.
 FROM eclipse-temurin:25-jre AS extractor
 WORKDIR /extractor
-COPY --from=build /workspace/build/libs/*.jar application.jar
+COPY build/libs/*.jar application.jar
 RUN java -Djarmode=tools -jar application.jar extract --layers --destination extracted
 
 FROM eclipse-temurin:25-jre AS runtime

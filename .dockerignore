@@ -1,0 +1,9 @@
+# Send nothing into the build context by default ...
+*
+
+# ... except the pre-built boot jar.
+!build
+build/*
+!build/libs
+build/libs/*
+!build/libs/*.jar
