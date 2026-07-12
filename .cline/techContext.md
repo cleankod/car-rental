@@ -109,7 +109,7 @@ eu.cleankod.carrental
   `org.springframework.boot:spring-boot-restclient` (`RestTemplateBuilder`) and
   `org.springframework.boot:spring-boot-resttestclient` (`TestRestTemplate`, package
   `org.springframework.boot.resttestclient`) — also needs `@AutoConfigureTestRestTemplate` on the test
-  class. Confirmed against `bet-settlement-trigger`, which hit the same issue.
+  class. Confirmed against a baseline playground project, which hit the same issue.
 - Manually verified with the app actually running (`./gradlew bootJar` + `java -jar` + `curl`): success
   (201), capacity exhaustion (409), validation failure (400), and malformed enum value (400) all return
   the expected status and `ErrorResponse` shape.
@@ -125,8 +125,8 @@ eu.cleankod.carrental
 
 - Black-box testing through the real REST entry point for anything with an injected collaborator
   (`ReservationService`, `InMemoryCarInventoryRepository`), unit tests only for pure/dependency-free
-  domain classes, concurrency kept as a deliberate white-box exception — see ADR 0003. Modeled on
-  `bet-settlement-trigger`'s validated precedent for an analogous project shape. Deleted
+  domain classes, concurrency kept as a deliberate white-box exception — see ADR 0003. Modeled on a
+  baseline playground project's validated precedent for an analogous project shape. Deleted
   `ReservationServiceTest` and `InMemoryCarInventoryRepositoryTest` after auditing every scenario against
   what remains — nothing was silently dropped (two genuinely unique scenarios moved up to
   `ReservationControllerTest` as new black-box tests).

@@ -13,8 +13,8 @@
 - Deleted `application/ReservationServiceTest.java` and
   `adapter/out/persistence/InMemoryCarInventoryRepositoryTest.java` entirely. Both test classes with an
   injected collaborator, whose scenarios are already fully proven end-to-end by
-  `ReservationControllerTest` hitting the same real objects one layer up — modeled directly on
-  `~/workspace/playground/bet-settlement-trigger`'s validated rule: "unit tests only for pure logic with
+  `ReservationControllerTest` hitting the same real objects one layer up — modeled directly on a
+  baseline playground project's validated rule: "unit tests only for pure logic with
   no injected dependencies." Every deleted scenario was cross-checked against what remains before
   deletion; nothing was silently dropped. Full write-up in
   `docs/decisions/0003-favor-black-box-tests-through-the-rest-entry-point.md`.
@@ -51,7 +51,7 @@
   `org.springframework.boot:spring-boot-resttestclient` module (package
   `org.springframework.boot.resttestclient`), which itself needs `org.springframework.boot:spring-boot-restclient`
   for `RestTemplateBuilder`, plus `@AutoConfigureTestRestTemplate` on the test class. Confirmed against
-  `~/workspace/playground/bet-settlement-trigger`, which hit and solved the same issue.
+  a baseline playground project, which hit and solved the same issue.
 - Concurrency strategy (from `in-memory-persistence`): a dedicated lock object per configured `CarType`,
   with each type's reservation list stored separately. Full write-up in
   `docs/decisions/0002-use-per-car-type-locking-for-atomic-allocation.md`.

@@ -14,8 +14,9 @@ an injected collaborator (`ReservationService` takes `CarInventoryRepository`; t
 adapter-like infrastructure), which raised the question of whether they should keep dedicated,
 per-layer tests at all now that a real end-to-end entry point exists.
 
-A sibling assessment repository (`bet-settlement-trigger`) had already answered this question for an
-analogous shape of project. Its rule, verbatim: *"Prefer integration tests over internal mocking. Unit
+A baseline playground project — a repo used to trial patterns until some prove good enough to become a
+starting point for other projects — had already answered this question for an analogous shape of
+project. Its rule, verbatim: *"Prefer integration tests over internal mocking. Unit
 tests only for pure logic with no injected dependencies."* In practice that produced exactly one
 dependency-free domain unit test and one full-stack HTTP integration test — no separate
 application-service or repository test — with its own ADR stating the same rationale this decision
@@ -62,8 +63,7 @@ adopts: *"This tolerates internal refactoring without test breakage."*
 - (+) No duplication: each scenario is asserted once, at the layer that actually owns it (the business
   *rule* in `CarTypeInventoryTest`/`RentalPeriodTest`, the end-to-end *wiring* in
   `ReservationControllerTest`).
-- (+) Matches a working precedent (`bet-settlement-trigger`) already validated for a project of this
-  shape.
+- (+) Matches a working precedent already validated on a baseline playground project of this shape.
 - (-) Losing a scenario during the collapse is a real risk if not audited carefully — see "Consequences"
   for how this was verified.
 - (-) A failing REST test doesn't localize *which* internal component broke as precisely as a per-layer
@@ -93,8 +93,8 @@ Pure value objects/rules are where a fast, precise unit test earns its keep — 
 want a tight TDD loop if the business rule itself changes. Anything wired through Spring is better
 proven through the stable, observable contract a real caller depends on (the HTTP API), so that
 internal refactoring doesn't require touching tests that were never protecting anything beyond what the
-REST test already covers. This mirrors `bet-settlement-trigger`'s validated approach for an analogous
-project shape, adapted to this project's own boundaries (no messaging/DB, so no Testcontainers
+REST test already covers. This mirrors a baseline playground project's validated approach for an
+analogous project shape, adapted to this project's own boundaries (no messaging/DB, so no Testcontainers
 overhead — the Spring context here is lightweight, an embedded Tomcat only).
 
 ## Consequences
@@ -127,7 +127,7 @@ overhead — the Spring context here is lightweight, an embedded Tomcat only).
   `CarTypeInventory.hasCapacityFor`, which remains directly unit-tested).
 - Integration-level proof now depends on booting a Spring context per test class, which is slower than a
   plain unit test — though with no Testcontainers/DB in this project, this stays fast (an embedded
-  Tomcat only), unlike `bet-settlement-trigger`'s ~15s Testcontainers-backed suite.
+  Tomcat only), unlike the baseline playground project's ~15s Testcontainers-backed suite.
 - Test-method independence in `ReservationControllerTest` relies on careful, manual choice of
   non-colliding time windows rather than a structural guarantee (e.g. `@DirtiesContext` per method, which
   was deliberately not used since it would slow the suite down for no correctness benefit at this scale).
