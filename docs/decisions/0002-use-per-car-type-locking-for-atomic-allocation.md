@@ -92,6 +92,16 @@ is graded on correctness under concurrency, not throughput under load.
 - Two *different* car types can proceed fully in parallel; this is a design property, not separately
   proven by a test (asserting true parallelism deterministically in a unit test is impractical), and is
   documented here as a reasoned claim rather than a tested one.
+- `ReservationService` is consequently a one-line pass-through, not an orchestrator: the domain rule
+  (`CarTypeInventory#hasCapacityFor`) is invoked from inside `InMemoryCarInventoryRepository` (the lock
+  holder), not from the application layer — inverting the usual hexagonal expectation that the
+  application orchestrates domain logic while the adapter stays a dumb I/O boundary. Splitting
+  `CarInventoryRepository#reserve` into separate find/save calls so the service could invoke the rule
+  itself would reopen exactly the race this locking exists to prevent: two concurrent calls could both
+  read capacity as available and both write an overlapping reservation. A transactional persistence
+  store (a real database, using `@Transactional` with row-level locking, a unique constraint, or
+  optimistic-locking retry) would let the domain check move back into the service, with the database's
+  own isolation providing the atomicity guarantee instead of an application-visible Java lock.
 
 ## Known Limitations / Risks
 
