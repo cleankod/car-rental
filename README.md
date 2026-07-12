@@ -100,7 +100,22 @@ This project was built with Claude Code (Anthropic), used throughout for design 
 design and implementation decisions — architecture, domain model, concurrency strategy, testing
 approach — were directed and reviewed by me at each step; every non-trivial decision is recorded as an
 ADR under [`docs/decisions/`](docs/decisions/0001-use-lightweight-hexagonal-architecture.md) with the
-alternatives considered and why.
+alternatives considered and why. Each stage (domain model, use case, persistence, REST adapter, testing,
+docs) was implemented on its own branch and reviewed before the next one started.
+
+A few concrete instances of directing or overriding an initial AI proposal:
+
+- Rejected an initial hand-rolled test double and a Mockito-based test in favor of testing against real
+  in-memory collaborators — became the black-box testing approach in ADR 0003.
+- Chose the REST request shape (`start` + `days`, not `start` + `end`) after being shown the trade-off.
+- Selected lightweight Hexagonal Architecture over plain layered after reviewing the evaluation in
+  ADR 0001.
+- Deferred two proposed features (runtime fleet-admin endpoints, a `Clock`/`FakeClock` abstraction) as
+  out of scope after discussing the trade-offs.
+
+Every stage's build and tests were run and confirmed green before committing, the concurrency tests were
+run repeatedly to rule out flakiness, and every command in this README was actually executed, not just
+written down.
 
 ## Given more time
 
