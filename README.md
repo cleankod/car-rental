@@ -100,7 +100,7 @@ This project was built with Claude Code (Anthropic), used throughout for design 
 design and implementation decisions — architecture, domain model, concurrency strategy, testing
 approach — were directed and reviewed by me at each step; every non-trivial decision is recorded as an
 ADR under [`docs/decisions/`](docs/decisions/0001-use-lightweight-hexagonal-architecture.md) with the
-alternatives considered and why. I can explain and defend any part of this codebase in the interview.
+alternatives considered and why.
 
 ## Given more time
 
