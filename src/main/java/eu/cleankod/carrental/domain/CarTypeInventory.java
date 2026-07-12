@@ -5,9 +5,9 @@ import java.util.Objects;
 
 /**
  * The fixed number of units available for a {@link CarType}, and the rule for whether a candidate
- * period can be accepted given the periods already reserved for that type. A candidate is accepted
- * only if fewer than {@code totalUnits} existing periods overlap it — i.e. at least one unit is free
- * for the whole candidate period.
+ * reservation can be accepted given the reservations already accepted for that type. A candidate is
+ * accepted only if fewer than {@code totalUnits} existing reservations overlap it — i.e. at least one
+ * unit is free for the whole candidate period.
  *
  * <p>This is a conservative admission rule, not a full bin-repacking optimizer: existing reservations
  * are never reassigned between units, so in rare fragmented-inventory cases a period that a cleverer
@@ -23,8 +23,8 @@ public record CarTypeInventory(CarType carType, int totalUnits) {
         }
     }
 
-    public boolean hasCapacityFor(Collection<RentalPeriod> existingPeriods, RentalPeriod candidate) {
-        long overlapping = existingPeriods.stream().filter(candidate::overlaps).count();
+    public boolean hasCapacityFor(Collection<Reservation> existingReservations, Reservation candidate) {
+        long overlapping = existingReservations.stream().filter(candidate::overlaps).count();
         return overlapping < totalUnits;
     }
 }

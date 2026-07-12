@@ -44,13 +44,12 @@ public class InMemoryCarInventoryRepository implements CarInventoryRepository {
         synchronized (locksByType.get(carType)) {
             CarTypeInventory inventory = inventoriesByType.get(carType);
             List<Reservation> existingReservations = reservationsByType.get(carType);
-            List<RentalPeriod> existingPeriods = existingReservations.stream().map(Reservation::period).toList();
-            if (!inventory.hasCapacityFor(existingPeriods, period)) {
+            Reservation candidate = Reservation.of(carType, period);
+            if (!inventory.hasCapacityFor(existingReservations, candidate)) {
                 throw new CarUnavailableException(carType, period);
             }
-            Reservation reservation = Reservation.of(carType, period);
-            existingReservations.add(reservation);
-            return reservation;
+            existingReservations.add(candidate);
+            return candidate;
         }
     }
 }

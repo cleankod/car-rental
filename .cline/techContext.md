@@ -48,12 +48,13 @@ eu.cleankod.carrental
 - `ReservationId` — record wrapping a `UUID`; `generate()` factory.
 - `Reservation` — record: `id`, `carType`, `period`; `of(carType, period)` factory generates the id;
   `overlaps(other)` is true only when both the car type matches and the periods overlap.
-- `CarTypeInventory` — record: `carType`, `totalUnits`. `hasCapacityFor(existingPeriods, candidate)`
-  accepts the candidate iff fewer than `totalUnits` existing periods overlap it. Deliberately a
-  conservative admission rule, not an optimal bin-repacking scheduler: existing reservations are never
-  reassigned between units, so a small number of pathological/fragmented-inventory cases could reject a
-  period that a cleverer reassignment could still fit — documented as a known trade-off, not an
-  oversight. Rejects `totalUnits <= 0` via `InvalidFleetSizeException`.
+- `CarTypeInventory` — record: `carType`, `totalUnits`. `hasCapacityFor(existingReservations, candidate)`
+  accepts the candidate `Reservation` iff fewer than `totalUnits` existing reservations overlap it (via
+  `Reservation.overlaps`, which folds in the car-type match). Deliberately a conservative admission
+  rule, not an optimal bin-repacking scheduler: existing reservations are never reassigned between
+  units, so a small number of pathological/fragmented-inventory cases could reject a period that a
+  cleverer reassignment could still fit — documented as a known trade-off, not an oversight. Rejects
+  `totalUnits <= 0` via `InvalidFleetSizeException`.
 - Exceptions so far: `InvalidRentalPeriodException`, `InvalidFleetSizeException`. `CarUnavailableException`
   (rejecting a reservation attempt) is deferred to the `reservation-use-case` stage, where something
   actually throws it — no point creating it earlier as dead code.
