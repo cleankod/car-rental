@@ -19,5 +19,6 @@ build/
 # is chosen for this assignment, silently excluding real source packages.
 /out/
 
-# MkDocs (if used)
+# MkDocs
 site/
+.venv/
