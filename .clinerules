@@ -61,25 +61,14 @@ use case (see "Architecture rules" and the REST API section below), not somethin
 - Docker Compose
 - Multi-stage Dockerfile
 
-No Testcontainers, Micrometer, Spring Boot Actuator, or MkDocs: there is no container-backed dependency
-(DB/broker) to test against, no running service whose metrics/health would be meaningful to expose, and
-a single-page README is proportional to a two-hour take-home where MkDocs tooling would be pure
-ceremony.
+No Testcontainers, Micrometer, or Spring Boot Actuator: there is no container-backed dependency (DB/
+broker) to test against, and no running service whose metrics/health would be meaningful to expose.
+MkDocs (Material theme, Mermaid diagrams) is used for internal docs — see "Documentation rules".
 
 ## Technology choices — per assignment
 
-- **Architecture pattern**: lightweight Hexagonal Architecture, package-by-feature, scoped down from the
-  full multi-adapter form. See "Architecture rules" below for the full evaluation against plain layered
-  — the short version: the classic Hexagonal trigger (multiple real integrations, one of them
-  mocked/swappable) does not strictly apply here, since there is exactly one real boundary (in-memory
-  inventory/reservation storage). What tips the choice is that "clear separation between domain
-  behaviour and infrastructure" is one of the assignment's explicitly named non-trivial areas to
-  demonstrate, and the concurrency-control mechanism (how atomicity is achieved) is exactly the kind of
-  thing worth hiding behind a port so the domain/use-case stays provably independent of it. The
-  incremental cost of a named port + one in-memory adapter over a plain interface + implementation is
-  effectively zero, so paying it for the clearer interview narrative is justified — but only in this
-  scoped-down form: no top-level `adapter.in`/`adapter.out` split for technologies that don't exist here
-  (messaging, secondary integrations), no `UseCase`-suffix ceremony beyond the one real use case.
+- **Architecture pattern**: lightweight Hexagonal Architecture — see "Architecture rules" below for the
+  full evaluation against plain layered and why (ADR 0001).
 - **Persistence**: plain in-memory collections, guarded for thread safety. Nothing needs to survive a
   restart or be queried relationally; a real database would be disproportionate infrastructure for a
   simulated system the brief explicitly allows to simulate.
@@ -88,16 +77,10 @@ ceremony.
   event/queue-driven flow.
 - **Secondary/mocked integrations**: none. There is no second system to mock — the in-memory store *is*
   the real (simulated) persistence for this system, not a stand-in for something else.
-- **REST adapter**: implemented, minimal — one endpoint, `POST /api/v1/reservations`, taking `carType`,
-  `start`, `days` (matching the domain's own `RentalPeriod` shape rather than a date range — see
-  "REST API rules" below for why). Fleet sizes are externalized to `car-rental.fleet.*` in
-  `application.yml` rather than hardcoded, giving the `config` package a real purpose. The brief never
-  asks for an HTTP API — "unit tests" are the explicit verification mechanism — so this stays a
-  demonstration of the adapter boundary, not a feature to expand.
-- **Concurrency strategy**: deliberate design concern, not an afterthought. The in-memory inventory/
-  reservation store must guarantee that concurrent reservation attempts for the same car type and
-  overlapping window cannot both succeed when only one unit remains — see "Domain model rules" and the
-  dedicated concurrency stage.
+- **REST adapter**: implemented, minimal — one endpoint, `POST /api/v1/reservations` — see "REST API
+  rules" below for the request-shape decision.
+- **Concurrency strategy**: deliberate design concern, not an afterthought — see "Persistence rules"
+  below and ADR 0002.
 
 ## Code style rules
 
@@ -128,16 +111,10 @@ ceremony.
     and explain — for a single-integration, CRUD-shaped assignment. Don't invent ports/adapters
     ceremony for one technology per side.
   - **Selected for this assignment: lightweight Hexagonal**, evaluated (not defaulted) against plain
-    layered — recorded in `docs/decisions/0001-use-lightweight-hexagonal-architecture.md`.
-    Honest accounting: this assignment has exactly one real outbound
-    integration (in-memory storage) and no mocked/swappable secondary system, which is the profile the
-    rule above assigns to plain layered. The deciding factor is that a named port + single in-memory
-    adapter costs almost nothing more than a plain interface + implementation, while buying a cleaner
-    interview narrative for two areas the brief explicitly calls out as worth demonstrating depth on:
-    domain/infrastructure separation, and isolating the concurrency-control mechanism from the business
-    rule it protects. If this project ever grows a second real integration, this choice pays for itself;
-    if not, the cost paid today is negligible. Kept deliberately *lightweight*: no adapter subtree for
-    technologies that don't exist here.
+    layered — full evaluation, including why the classic trigger above doesn't strictly apply here and
+    why it's still worth it at near-zero incremental cost, is in
+    `docs/decisions/0001-use-lightweight-hexagonal-architecture.md`. Kept deliberately *lightweight*: no
+    adapter subtree for technologies that don't exist here.
 - Prefer boring, explicit code over clever code, regardless of pattern.
 - Keep the design easy to explain in an interview.
 - Do not use CQRS, event sourcing, sagas, multi-module Gradle, or outbox pattern unless explicitly approved.
@@ -354,7 +331,14 @@ eu.cleankod.carrental
 - README must explain: assignment summary, prerequisites, quick start, running tests, architecture
   overview (including why lightweight Hexagonal was chosen over plain layered), the concurrency
   approach and how it's tested, known limitations and trade-offs (explicitly required by the brief), AI
-  usage disclosure, and a "given more time" section.
+  usage disclosure, and a "given more time" section. Keep it short — link to the MkDocs site for depth
+  rather than duplicating it.
+- Internal docs use MkDocs (Material theme) under `docs/`, covering architecture and testing strategy
+  in more depth than the README; `docs/decisions/` (the ADRs) is part of the same site's nav. Diagrams
+  use Mermaid (via `pymdownx.superfences`, native to the Material theme — no extra plugin needed).
+- Every doc has exactly one authoritative home for its full rationale (an ADR, or the relevant
+  `.clinerules` section for decisions with no ADR) — other files state the conclusion and link there,
+  they do not re-derive the reasoning.
 - README commands must be copy-paste verified before submission.
 - Documentation must not overpromise features.
 - "Given more time" must not include things essential for the assignment (i.e. must not be used to wave
