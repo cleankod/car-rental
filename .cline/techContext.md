@@ -10,7 +10,7 @@
 | Persistence | Plain in-memory collections, thread-safe (no DB — simulated system, nothing needs to survive a restart) |
 | Migrations | None — no schema |
 | Messaging | None — single synchronous operation, not event/queue-driven |
-| Testing | JUnit 5, AssertJ — prefer real, dependency-free collaborators (e.g. `InMemoryCarInventoryRepository`) over Mockito |
+| Testing | JUnit 5, AssertJ — black-box by default: unit-test only pure/dependency-free classes; anything with an injected collaborator is proven through the real REST entry point, not mocked (see ADR 0003) |
 | Observability | SLF4J + Logback only — Actuator/Micrometer deliberately dropped, no long-running service to monitor |
 | Docs | Plain README (no MkDocs — disproportionate for a 2-hour take-home) |
 
@@ -84,10 +84,12 @@ eu.cleankod.carrental
   *different* types never contend. See
   `docs/decisions/0002-use-per-car-type-locking-for-atomic-allocation.md` for the alternatives considered
   (single global lock, lock-free/CAS) and why per-type locking was chosen.
-- Tests exercise `ReservationService` and `InMemoryCarInventoryRepository` directly (real collaborators,
-  not mocks) — see "Testing rules" in `.clinerules` for why.
-  `InMemoryCarInventoryRepositoryConcurrencyTest` races many threads for the same car type and asserts
-  exactly `totalUnits` succeed and the rest are rejected, proving the atomicity property directly.
+- `ReservationService` and `InMemoryCarInventoryRepository` are no longer given their own dedicated unit
+  tests — both have an injected collaborator, so per ADR 0003 they're proven exclusively through
+  `ReservationControllerTest` (the real REST entry point), not in isolation. The one deliberate
+  exception is `InMemoryCarInventoryRepositoryConcurrencyTest`, which races many threads directly
+  against `repository.reserve(...)` for the same car type and asserts exactly `totalUnits` succeed and
+  the rest are rejected — a property that can't be reliably reproduced by racing real HTTP calls.
 
 ## REST Adapter
 
@@ -107,13 +109,27 @@ eu.cleankod.carrental
   `org.springframework.boot:spring-boot-restclient` (`RestTemplateBuilder`) and
   `org.springframework.boot:spring-boot-resttestclient` (`TestRestTemplate`, package
   `org.springframework.boot.resttestclient`) — also needs `@AutoConfigureTestRestTemplate` on the test
-  class. Confirmed against `bet-settlement-trigger`, which hit the same issue.
+  class. Confirmed against a baseline playground project, which hit the same issue.
 - Manually verified with the app actually running (`./gradlew bootJar` + `java -jar` + `curl`): success
   (201), capacity exhaustion (409), validation failure (400), and malformed enum value (400) all return
   the expected status and `ErrorResponse` shape.
+- `ReservationControllerTest` now also covers (added in the `black-box-testing` stage, ADR 0003): the
+  conflict scenario uses a genuinely overlapping-but-different second period (not an exact duplicate)
+  and asserts the exception message, not just the error code; back-to-back (touching, non-overlapping)
+  reservations of the same type both succeeding even at one unit; and capacity being tracked
+  independently per car type. Test methods use clearly-separated month-scale time windows per scenario
+  since the Spring context (and its singleton repository bean) is cached across all methods in the
+  class with no `@DirtiesContext`, and JUnit doesn't guarantee method order.
 
 ## Key Decisions
 
+- Black-box testing through the real REST entry point for anything with an injected collaborator
+  (`ReservationService`, `InMemoryCarInventoryRepository`), unit tests only for pure/dependency-free
+  domain classes, concurrency kept as a deliberate white-box exception — see ADR 0003. Modeled on a
+  baseline playground project's validated precedent for an analogous project shape. Deleted
+  `ReservationServiceTest` and `InMemoryCarInventoryRepositoryTest` after auditing every scenario against
+  what remains — nothing was silently dropped (two genuinely unique scenarios moved up to
+  `ReservationControllerTest` as new black-box tests).
 - Per-car-type locking (dedicated lock object per `CarType`, not the enum constant itself) for atomic
   allocation, over a single global lock or lock-free/CAS — see ADR 0002.
 - Lightweight Hexagonal over plain layered — see "Architecture" above and `.clinerules`.

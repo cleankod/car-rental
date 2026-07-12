@@ -2,14 +2,41 @@
 
 ## Current State
 
-- Branch: `rest-api`
-- Based on: `master` after `in-memory-persistence` was merged (PR #5)
-- Task: implementing the minimal REST adapter — `ReservationController`, request/response DTOs,
-  `RestExceptionHandler`, and the `config` package (`CarRentalConfiguration`/`FleetProperties`) wiring it
-  all together. This is the optional stage; next after this is `documentation`.
+- Branch: `black-box-testing`
+- Based on: `master` after `rest-api` was merged (PR #6)
+- Task: restructuring the test suite toward black-box coverage now that the REST adapter exists —
+  deleting redundant per-layer tests, adding/strengthening REST-level scenarios, ADR 0003. Next stage
+  after this one is `documentation`, the last planned stage.
 
 ## Most Recent Decisions
 
+- Deleted `application/ReservationServiceTest.java` and
+  `adapter/out/persistence/InMemoryCarInventoryRepositoryTest.java` entirely. Both test classes with an
+  injected collaborator, whose scenarios are already fully proven end-to-end by
+  `ReservationControllerTest` hitting the same real objects one layer up — modeled directly on a
+  baseline playground project's validated rule: "unit tests only for pure logic with
+  no injected dependencies." Every deleted scenario was cross-checked against what remains before
+  deletion; nothing was silently dropped. Full write-up in
+  `docs/decisions/0003-favor-black-box-tests-through-the-rest-entry-point.md`.
+- Two genuinely unique scenarios (no equivalent anywhere else) moved up to `ReservationControllerTest`
+  as new black-box tests: `allowsBackToBackReservationsOfTheSameTypeWhenPeriodsDoNotOverlap` and
+  `tracksCapacityIndependentlyAcrossCarTypes`.
+- Strengthened the existing conflict test (renamed
+  `returnsConflictWhenAnOverlappingPeriodLeavesNoUnitAvailable`): the second request now uses a
+  genuinely overlapping-but-different period instead of an exact duplicate of the first (proves overlap
+  detection itself is reachable through HTTP, not just repeat-request equality), and asserts
+  `ErrorResponse.message()` contains "SUV" — closing a real coverage gap the deletion would otherwise
+  have left (the `CarUnavailableException` message had no other test home).
+  `InMemoryCarInventoryRepositoryConcurrencyTest` is untouched — the one deliberate white-box exception,
+  since racing real HTTP calls can't reproduce the tight thread contention that test needs.
+- Considered and declined two related ideas raised mid-stage: admin endpoints to add/inspect fleet state
+  at runtime (deferred — real new scope: `CarTypeInventory.totalUnits` is currently immutable, making it
+  runtime-adjustable needs a new domain rule for shrinking a fleet below its active-reservation count;
+  not needed to solve test isolation, which is handled by non-colliding time windows instead); and a
+  `Clock`/`FakeClock` bean (skipped — nothing in the domain currently depends on "now" — `RentalPeriod.start`
+  is always caller-supplied — so it wouldn't change any production behavior, and it wouldn't fix the
+  test-isolation issue either, which comes from the shared cached Spring context, not date-literal
+  strategy; revisit only if a time-dependent rule like "can't reserve in the past" is added).
 - REST request shape is `{carType, start, days}` (mirrors `RentalPeriod` directly) rather than
   `{carType, start, end}` — considered and decided against the date-range alternative: it would require
   inventing a policy for non-whole-day gaps (reject? round and silently shift the return time?), which is
@@ -19,19 +46,12 @@
   Validation/malformed-JSON failures→400, anything else→500 generic — all as
   `ErrorResponse(errorId, code, message, details)`, never a raw exception name or stack trace.
 - Fleet sizes externalized via `FleetProperties` (`@ConfigurationProperties`) and `application.yml`
-  (`car-rental.fleet.*`) rather than hardcoded in `CarRentalConfiguration` — gives the previously-empty
-  `config` package a real purpose now that something needs Spring wiring.
-- `ReservationControllerTest` uses `@SpringBootTest(webEnvironment = RANDOM_PORT)` + `TestRestTemplate`
-  against the real app context — no `MockMvc`, no mocked use case, consistent with the "prefer real
-  collaborators" testing philosophy from earlier stages. Fleet sizes pinned to 1 unit/type via
-  `@TestPropertySource` so capacity-exhaustion tests don't depend on production defaults.
+  (`car-rental.fleet.*`) rather than hardcoded in `CarRentalConfiguration`.
 - Hit a real dependency gap: Spring Boot 4 split `TestRestTemplate` out of `spring-boot-test` into a new
   `org.springframework.boot:spring-boot-resttestclient` module (package
   `org.springframework.boot.resttestclient`), which itself needs `org.springframework.boot:spring-boot-restclient`
   for `RestTemplateBuilder`, plus `@AutoConfigureTestRestTemplate` on the test class. Confirmed against
-  `~/workspace/playground/bet-settlement-trigger`, which hit and solved the same issue.
-- Manually verified the running app for real (`./gradlew bootJar` + `java -jar` + `curl`): success (201),
-  capacity exhaustion (409), validation failure (400), malformed enum (400) all behave as expected.
+  a baseline playground project, which hit and solved the same issue.
 - Concurrency strategy (from `in-memory-persistence`): a dedicated lock object per configured `CarType`,
   with each type's reservation list stored separately. Full write-up in
   `docs/decisions/0002-use-per-car-type-locking-for-atomic-allocation.md`.
@@ -51,12 +71,12 @@
 
 ## Project Status
 
-Bootstrap, rules, architectural boundaries, the domain model, the reservation use case, and concurrency
-hardening are all merged. Currently on `rest-api`, implementing the minimal REST adapter. Next stage
-after this one is `documentation` (README, limitations/trade-offs, AI usage disclosure, "given more
-time") — the last planned stage. **Branch creation is the user's step, not Claude Code's** —
-implementation of the next stage begins only after the user creates and checks out that branch and
-confirms.
+Bootstrap, rules, architectural boundaries, the domain model, the reservation use case, concurrency
+hardening, and the REST adapter are all merged. Currently on `black-box-testing`, restructuring the test
+suite. Next stage after this one is `documentation` (README, limitations/trade-offs, AI usage
+disclosure, "given more time") — the last planned stage. **Branch creation is the user's step, not
+Claude Code's** — implementation of the next stage begins only after the user creates and checks out
+that branch and confirms.
 
 ## Session Resumption Notes
 
