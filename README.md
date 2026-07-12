@@ -82,6 +82,10 @@ see [`docs/testing.md`](docs/testing.md) and [ADR 0003](docs/decisions/0003-favo
   fewer than `totalUnits` existing reservations overlap it; existing reservations are never reassigned
   between units. In rare fragmented-inventory cases, a period a cleverer reassignment could still fit
   may be rejected. Chosen for simplicity and predictability over optimality.
+- **No time zone** — `RentalPeriod`/`ReservationRequest` use `LocalDateTime` throughout, which carries no
+  offset or zone; two clients in different time zones sending the same `LocalDateTime` value mean
+  different real instants, silently. Assumes a single implicit time zone shared by client and server. A
+  real system would use `OffsetDateTime`/`Instant` plus an explicit zone policy.
 - **Unbounded per-type reservation scan** — `InMemoryCarInventoryRepository` keeps every reservation ever
   accepted for a car type and scans all of them on each `reserve` call. Fine at this project's toy scale;
   a real deployment would narrow via an indexed DB range query (`WHERE car_type=? AND start<? AND
