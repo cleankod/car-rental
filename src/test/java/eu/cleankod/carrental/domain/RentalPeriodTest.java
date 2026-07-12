@@ -78,6 +78,17 @@ class RentalPeriodTest {
         }
 
         @Test
+        void isTrueWhenOnePeriodIsFullyContainedWithinTheOther() {
+            // given
+            var outer = new RentalPeriod(START, 10);
+            var inner = new RentalPeriod(START.plusDays(2), 3);
+
+            // when / then
+            assertThat(outer.overlaps(inner)).isTrue();
+            assertThat(inner.overlaps(outer)).isTrue();
+        }
+
+        @Test
         void isFalseWhenPeriodsAreClearlySeparate() {
             // given
             var first = new RentalPeriod(START, 2);
