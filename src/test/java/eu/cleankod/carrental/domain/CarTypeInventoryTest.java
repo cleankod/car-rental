@@ -116,5 +116,42 @@ class CarTypeInventoryTest {
             // then
             assertThat(hasCapacity).isTrue();
         }
+
+        @Test
+        void isTrueWhenCandidateStartsExactlyWhenTheOnlyExistingReservationEnds() {
+            // given: the sweep must process the existing reservation's end (-1) before the candidate's
+            // start (+1) at the exact same instant, so a back-to-back booking is never counted as
+            // simultaneous — this protects the sweep's own tie-breaking directly, independent of the
+            // RentalPeriod.overlaps-based proof of the same adjacency rule
+            var inventory = new CarTypeInventory(CarType.SEDAN, 1);
+            var existing = Reservation.of(CarType.SEDAN, new RentalPeriod(START, 2));
+            var candidate = Reservation.of(CarType.SEDAN, new RentalPeriod(existing.period().endExclusive(), 2));
+
+            // when
+            var hasCapacity = inventory.hasCapacityFor(List.of(existing), candidate);
+
+            // then
+            assertThat(hasCapacity).isTrue();
+        }
+
+        @Test
+        void isTrueWhenMultipleReservationsStartAndEndAtTheSameInstant() {
+            // given: two reservations share the same start instant, and two more (one existing, one
+            // the candidate) share the exact instant the first two end. A sweep that processes ends
+            // before starts at a tied instant never sees more than 2 simultaneously, even though four
+            // start/end events land on only two timestamps
+            var inventory = new CarTypeInventory(CarType.VAN, 2);
+            var firstEarlyExisting = Reservation.of(CarType.VAN, new RentalPeriod(START, 2));
+            var secondEarlyExisting = Reservation.of(CarType.VAN, new RentalPeriod(START, 2));
+            var lateExisting = Reservation.of(CarType.VAN, new RentalPeriod(START.plusDays(2), 2));
+            var candidate = Reservation.of(CarType.VAN, new RentalPeriod(START.plusDays(2), 2));
+
+            // when
+            var hasCapacity = inventory.hasCapacityFor(
+                    List.of(firstEarlyExisting, secondEarlyExisting, lateExisting), candidate);
+
+            // then
+            assertThat(hasCapacity).isTrue();
+        }
     }
 }
