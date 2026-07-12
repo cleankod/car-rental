@@ -34,7 +34,7 @@ class CarTypeInventoryTest {
         void isTrueWhenNoExistingReservationsOverlap() {
             // given
             var inventory = new CarTypeInventory(CarType.SEDAN, 1);
-            var candidate = new RentalPeriod(START, 3);
+            var candidate = Reservation.of(CarType.SEDAN, new RentalPeriod(START, 3));
 
             // when
             var hasCapacity = inventory.hasCapacityFor(List.of(), candidate);
@@ -47,8 +47,8 @@ class CarTypeInventoryTest {
         void isFalseWhenTheSingleUnitIsAlreadyReservedForAnOverlappingPeriod() {
             // given
             var inventory = new CarTypeInventory(CarType.SEDAN, 1);
-            var existing = new RentalPeriod(START, 3);
-            var candidate = new RentalPeriod(START.plusDays(1), 3);
+            var existing = Reservation.of(CarType.SEDAN, new RentalPeriod(START, 3));
+            var candidate = Reservation.of(CarType.SEDAN, new RentalPeriod(START.plusDays(1), 3));
 
             // when
             var hasCapacity = inventory.hasCapacityFor(List.of(existing), candidate);
@@ -61,8 +61,8 @@ class CarTypeInventoryTest {
         void isTrueWhenASecondUnitIsStillFree() {
             // given
             var inventory = new CarTypeInventory(CarType.SUV, 2);
-            var existing = new RentalPeriod(START, 3);
-            var candidate = new RentalPeriod(START.plusDays(1), 3);
+            var existing = Reservation.of(CarType.SUV, new RentalPeriod(START, 3));
+            var candidate = Reservation.of(CarType.SUV, new RentalPeriod(START.plusDays(1), 3));
 
             // when
             var hasCapacity = inventory.hasCapacityFor(List.of(existing), candidate);
@@ -75,9 +75,9 @@ class CarTypeInventoryTest {
         void isFalseWhenAllUnitsAreAlreadyReservedForOverlappingPeriods() {
             // given
             var inventory = new CarTypeInventory(CarType.VAN, 2);
-            var firstExisting = new RentalPeriod(START, 5);
-            var secondExisting = new RentalPeriod(START.plusDays(1), 5);
-            var candidate = new RentalPeriod(START.plusDays(2), 5);
+            var firstExisting = Reservation.of(CarType.VAN, new RentalPeriod(START, 5));
+            var secondExisting = Reservation.of(CarType.VAN, new RentalPeriod(START.plusDays(1), 5));
+            var candidate = Reservation.of(CarType.VAN, new RentalPeriod(START.plusDays(2), 5));
 
             // when
             var hasCapacity = inventory.hasCapacityFor(List.of(firstExisting, secondExisting), candidate);
@@ -90,8 +90,8 @@ class CarTypeInventoryTest {
         void ignoresExistingReservationsThatDoNotOverlapTheCandidate() {
             // given
             var inventory = new CarTypeInventory(CarType.SEDAN, 1);
-            var existing = new RentalPeriod(START, 2);
-            var candidate = new RentalPeriod(START.plusDays(10), 2);
+            var existing = Reservation.of(CarType.SEDAN, new RentalPeriod(START, 2));
+            var candidate = Reservation.of(CarType.SEDAN, new RentalPeriod(START.plusDays(10), 2));
 
             // when
             var hasCapacity = inventory.hasCapacityFor(List.of(existing), candidate);

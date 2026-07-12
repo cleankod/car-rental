@@ -53,7 +53,7 @@ sequenceDiagram
     RS->>Repo: reserve(carType, period)
     activate Repo
     Note over Repo: synchronized on carType's lock
-    Repo->>Inv: hasCapacityFor(existingPeriods, period)
+    Repo->>Inv: hasCapacityFor(existingReservations, candidate)
     Inv-->>Repo: true / false
     alt capacity available
         Repo->>Repo: record reservation
@@ -98,18 +98,19 @@ classDiagram
     class CarTypeInventory {
         +CarType carType
         +int totalUnits
-        +hasCapacityFor(periods, candidate) boolean
+        +hasCapacityFor(reservations, candidate) boolean
     }
     Reservation --> CarType
     Reservation --> RentalPeriod
     CarTypeInventory --> CarType
-    CarTypeInventory ..> RentalPeriod : evaluates
+    CarTypeInventory ..> Reservation : evaluates
 ```
 
 - **`RentalPeriod`** is a half-open interval `[start, start + days)` — two periods that only touch at
   the boundary don't overlap, so back-to-back reservations of the same car are allowed.
-- **`CarTypeInventory`** is the limited-inventory rule itself: a candidate period is accepted iff fewer
-  than `totalUnits` existing periods overlap it. Deliberately conservative, not an optimal
+- **`CarTypeInventory`** is the limited-inventory rule itself: a candidate reservation is accepted iff
+  fewer than `totalUnits` existing reservations overlap it (via `Reservation.overlaps`, which combines
+  the car-type match with `RentalPeriod.overlaps`). Deliberately conservative, not an optimal
   bin-repacking scheduler — see the class Javadoc and the README's limitations section.
 - All four types are immutable records; invariant violations throw a domain-specific exception
   (`InvalidRentalPeriodException`, `InvalidFleetSizeException`, `CarUnavailableException`) rather than a
