@@ -99,5 +99,22 @@ class CarTypeInventoryTest {
             // then
             assertThat(hasCapacity).isTrue();
         }
+
+        @Test
+        void isTrueWhenExistingReservationsOverlapTheCandidateButNotEachOther() {
+            // given: firstExisting and secondExisting don't overlap each other, so one vehicle could
+            // serve both sequentially, freeing the second vehicle for the candidate — even though the
+            // candidate overlaps both of them individually
+            var inventory = new CarTypeInventory(CarType.SUV, 2);
+            var firstExisting = Reservation.of(CarType.SUV, new RentalPeriod(START, 5));
+            var secondExisting = Reservation.of(CarType.SUV, new RentalPeriod(START.plusDays(10), 5));
+            var candidate = Reservation.of(CarType.SUV, new RentalPeriod(START.plusDays(3), 9));
+
+            // when
+            var hasCapacity = inventory.hasCapacityFor(List.of(firstExisting, secondExisting), candidate);
+
+            // then
+            assertThat(hasCapacity).isTrue();
+        }
     }
 }
