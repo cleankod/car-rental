@@ -32,8 +32,9 @@ silently ignoring the criterion.
 ## Considered Options
 
 1. Plain layered (`controller` / `service` / `repository`)
-2. Full Hexagonal / Ports and Adapters (multi-adapter form, with `adapter.in`/`adapter.out` subtrees for
-   every technology, `UseCase`-suffixed ports for every operation)
+2. Hexagonal, applied without scoping to what's actually needed — speculative ports, adapters, or
+   packages for integrations that might be added later (messaging, a second system), `UseCase`-suffixed
+   ports for operations that don't exist yet
 3. Lightweight Hexagonal — one inbound port, one outbound port, no adapter subtree for technologies that
    don't exist here (selected)
 
@@ -50,16 +51,20 @@ silently ignoring the criterion.
 - (-) No standard vocabulary for describing the domain/infrastructure boundary in an interview beyond
   "it's behind an interface."
 
-### Option 2 — Full Hexagonal
+### Option 2 — Hexagonal, scaffolded for integrations that don't exist yet
 
-- (+) Maximum flexibility if the system later grows more integrations.
-- (-) Ceremony for technologies that don't exist here — on top of the `adapter.in.rest`/
-  `adapter.out.persistence` this assignment genuinely needs, the full multi-adapter form's textbook
-  shape also expects `adapter.in.<messaging>`, `adapter.out.<messaging>`, and secondary-integration
-  subtrees, pre-built for a broker and a second system this assignment never has.
-- (-) Directly contradicts `.clinerules`'s own stated trigger for this pattern (multiple real
-  integrations, one mocked/swappable) — not the case here.
+- (+) If messaging or a second integration is added later, the structure is already in place.
+- (-) Speculative: adds ports, adapters, or packages for integrations this assignment doesn't have and
+  may never need — the premature abstraction `.clinerules`'s own architecture rules already warn against
+  ("do not introduce abstractions before there are at least two concrete reasons").
+- (-) Doesn't actually answer the question `.clinerules` poses: whether the *one real integration* this
+  assignment currently has justifies Hexagonal over plain layered in the first place.
 - (-) Disproportionate for a ~2-hour take-home; risks reading as over-engineering in the interview.
+- Note: there is no meaningfully different *package structure* for "full" vs. "lightweight" Hexagonal in
+  a system with exactly one real inbound and one real outbound integration — both produce the same tree
+  (`domain` / `application.port.in` / `application.port.out` / `adapter.in.rest` /
+  `adapter.out.persistence`). What this option actually names is scaffolding for integrations that
+  aren't there, not a competing structure for the ones that are.
 
 ### Option 3 — Lightweight Hexagonal (selected)
 
@@ -78,12 +83,13 @@ silently ignoring the criterion.
 
 ## Decision
 
-Adopt lightweight Hexagonal Architecture, scoped down from the full multi-adapter form: a single
-inbound port (`ReserveCarUseCase`), a single outbound port (`CarInventoryRepository`), package-by-feature
-collapsed to a root-level split (`domain` / `application` / `adapter` / `config`). `adapter.in.rest` and
+Adopt Hexagonal Architecture, scoped to exactly what this assignment needs: a single inbound port
+(`ReserveCarUseCase`), a single outbound port (`CarInventoryRepository`), package-by-feature collapsed to
+a root-level split (`domain` / `application` / `adapter` / `config`). `adapter.in.rest` and
 `adapter.out.persistence` exist because REST and in-memory persistence are real technologies this
-assignment uses — what's *not* added is a further subtree per technology this assignment doesn't have
-(messaging, a secondary integration).
+assignment uses. No port, adapter, or package is added for a technology (messaging, a secondary
+integration) this assignment doesn't have — "lightweight" describes that discipline, not a smaller
+version of some other, structurally fuller Hexagonal layout.
 
 ## Rationale
 
