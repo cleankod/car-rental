@@ -53,6 +53,7 @@ class ReservationControllerTest {
             ReservationResponse body = response.getBody();
             assertThat(body).isNotNull();
             assertThat(body.carType()).isEqualTo(CarType.SEDAN);
+            assertThat(body.start()).isEqualTo(START);
             assertThat(body.days()).isEqualTo(3);
             assertThat(body.id()).isNotNull();
         }
