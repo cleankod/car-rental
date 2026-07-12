@@ -53,8 +53,10 @@ silently ignoring the criterion.
 ### Option 2 — Full Hexagonal
 
 - (+) Maximum flexibility if the system later grows more integrations.
-- (-) Ceremony for technologies that don't exist here — `adapter.in`/`adapter.out` subtrees for messaging
-  and secondary integrations that this assignment never has.
+- (-) Ceremony for technologies that don't exist here — on top of the `adapter.in.rest`/
+  `adapter.out.persistence` this assignment genuinely needs, the full multi-adapter form's textbook
+  shape also expects `adapter.in.<messaging>`, `adapter.out.<messaging>`, and secondary-integration
+  subtrees, pre-built for a broker and a second system this assignment never has.
 - (-) Directly contradicts `.clinerules`'s own stated trigger for this pattern (multiple real
   integrations, one mocked/swappable) — not the case here.
 - (-) Disproportionate for a ~2-hour take-home; risks reading as over-engineering in the interview.
@@ -78,8 +80,10 @@ silently ignoring the criterion.
 
 Adopt lightweight Hexagonal Architecture, scoped down from the full multi-adapter form: a single
 inbound port (`ReserveCarUseCase`), a single outbound port (`CarInventoryRepository`), package-by-feature
-collapsed to a root-level split (`domain` / `application` / `adapter` / `config`), and no adapter subtree
-for technologies that don't exist in this assignment (messaging, secondary integrations).
+collapsed to a root-level split (`domain` / `application` / `adapter` / `config`). `adapter.in.rest` and
+`adapter.out.persistence` exist because REST and in-memory persistence are real technologies this
+assignment uses — what's *not* added is a further subtree per technology this assignment doesn't have
+(messaging, a secondary integration).
 
 ## Rationale
 

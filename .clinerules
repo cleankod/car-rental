@@ -113,8 +113,9 @@ MkDocs (Material theme, Mermaid diagrams) is used for internal docs — see "Doc
   - **Selected for this assignment: lightweight Hexagonal**, evaluated (not defaulted) against plain
     layered — full evaluation, including why the classic trigger above doesn't strictly apply here and
     why it's still worth it at near-zero incremental cost, is in
-    `docs/decisions/0001-use-lightweight-hexagonal-architecture.md`. Kept deliberately *lightweight*: no
-    adapter subtree for technologies that don't exist here.
+    `docs/decisions/0001-use-lightweight-hexagonal-architecture.md`. Kept deliberately *lightweight*:
+    `adapter.in.rest`/`adapter.out.persistence` exist because those technologies are real; no *further*
+    subtree is added for technologies this assignment doesn't have (messaging, secondary integrations).
 - Prefer boring, explicit code over clever code, regardless of pattern.
 - Keep the design easy to explain in an interview.
 - Do not use CQRS, event sourcing, sagas, multi-module Gradle, or outbox pattern unless explicitly approved.
