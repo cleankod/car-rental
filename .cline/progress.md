@@ -10,8 +10,8 @@
 | `reservation-use-case` | `ReserveCarUseCase`, `ReservationService`, `CarInventoryRepository` port, and the real (not yet concurrency-safe) `InMemoryCarInventoryRepository` — tests run against that real repository, not a mock/fake | ✅ merged (PR #4) |
 | `in-memory-persistence` | Hardened `InMemoryCarInventoryRepository` with per-car-type locking for atomic allocation, concurrency tests (races threads for the last unit), ADR 0002 | ✅ merged (PR #5) |
 | `rest-api` | Minimal REST adapter: `POST /api/v1/reservations`, Bean Validation, `RestExceptionHandler`, `CarRentalConfiguration`/`FleetProperties` wiring fleet sizes from `application.yml` | ✅ merged (PR #6) |
-| `black-box-testing` | Deleted redundant per-layer tests (`ReservationServiceTest`, `InMemoryCarInventoryRepositoryTest`); re-homed their two unique scenarios (back-to-back same-type success, per-type independence) plus a strengthened overlap/conflict test as REST black-box tests; ADR 0003 | 🔄 in progress |
-| `documentation` | README, limitations/trade-offs, AI usage disclosure, "given more time" | ⬜ planned |
+| `black-box-testing` | Deleted redundant per-layer tests (`ReservationServiceTest`, `InMemoryCarInventoryRepositoryTest`); re-homed their two unique scenarios (back-to-back same-type success, per-type independence) plus a strengthened overlap/conflict test as REST black-box tests; ADR 0003 | ✅ merged (PR #7) |
+| `documentation` | README, MkDocs internal docs site (Material theme, Mermaid diagrams), limitations/trade-offs, AI usage disclosure, "given more time"; consolidated repeated rationale across `.clinerules`/memory bank into single pointers to ADRs | 🔄 in progress |
 
 <!-- Status legend: ⬜ planned · 🔄 in progress · ✅ merged -->
 
