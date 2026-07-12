@@ -1,7 +1,6 @@
 package eu.cleankod.carrental.adapter.in.rest;
 
 import eu.cleankod.carrental.domain.CarUnavailableException;
-import eu.cleankod.carrental.domain.InvalidRentalPeriodException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -22,12 +21,6 @@ class RestExceptionHandler {
     @ResponseStatus(HttpStatus.CONFLICT)
     ErrorResponse handleCarUnavailable(CarUnavailableException exception) {
         return ErrorResponse.of("CAR_UNAVAILABLE", exception.getMessage());
-    }
-
-    @ExceptionHandler(InvalidRentalPeriodException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    ErrorResponse handleInvalidRentalPeriod(InvalidRentalPeriodException exception) {
-        return ErrorResponse.of("INVALID_RENTAL_PERIOD", exception.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

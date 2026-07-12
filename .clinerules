@@ -232,10 +232,13 @@ eu.cleankod.carrental
 - Response: `201 Created` with the created reservation (`id`, `carType`, `start`, `days`).
 - Validate input using Bean Validation (`@NotNull`, `@Positive`).
 - Global error handling (`RestExceptionHandler`, `@RestControllerAdvice`) maps: `CarUnavailableException`
-  → `409 Conflict`; `InvalidRentalPeriodException` → `400 Bad Request`; Bean Validation failures
-  (`MethodArgumentNotValidException`) → `400 Bad Request` with per-field `details`; unparseable
-  JSON/unrecognized enum values (`HttpMessageNotReadableException`) → `400 Bad Request`; anything else →
-  `500 Internal Server Error` with a generic message, never the raw exception name/stack trace.
+  → `409 Conflict`; Bean Validation failures (`MethodArgumentNotValidException`) → `400 Bad Request` with
+  per-field `details`; unparseable JSON/unrecognized enum values (`HttpMessageNotReadableException`) →
+  `400 Bad Request`; anything else → `500 Internal Server Error` with a generic message, never the raw
+  exception name/stack trace. No REST mapping for `InvalidRentalPeriodException`: Bean Validation's
+  `@Positive` on `days` already rejects the same non-positive values before `RentalPeriod` is ever
+  constructed from a request, so that domain exception is unreachable via this endpoint — the
+  `RentalPeriod` constructor still enforces the invariant directly for any caller, REST or not.
 - Error responses contain: `errorId` (random, for correlating with logs/support), `code` (stable,
   machine-readable), `message`, `details` (list, empty unless there's something field-specific to add).
 - Fleet sizes (`car-rental.fleet.sedan-units`/`suv-units`/`van-units`) are externalized in
