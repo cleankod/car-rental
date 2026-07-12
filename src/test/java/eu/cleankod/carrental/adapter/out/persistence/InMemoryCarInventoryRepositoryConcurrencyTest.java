@@ -32,14 +32,15 @@ class InMemoryCarInventoryRepositoryConcurrencyTest {
 
         @Test
         void allowsExactlyOneWinnerWhenConcurrentAttemptsRaceForTheLastUnit() throws Exception {
-            // given
+            // given: each thread requests its own distinct period (a different `days` value), all
+            // sharing the same start so every pair genuinely overlaps — not literally the same request
+            // repeated
             int attempts = 20;
             InMemoryCarInventoryRepository repository =
                     new InMemoryCarInventoryRepository(new CarTypeInventory(CarType.SEDAN, 1));
-            RentalPeriod period = new RentalPeriod(START, 3);
 
             // when
-            RaceResult result = raceForTheSamePeriod(repository, CarType.SEDAN, period, attempts);
+            RaceResult result = raceForOverlappingPeriods(repository, CarType.SEDAN, START, attempts);
 
             // then
             assertThat(result.succeeded()).isEqualTo(1);
@@ -48,35 +49,41 @@ class InMemoryCarInventoryRepositoryConcurrencyTest {
 
         @Test
         void allowsExactlyTotalUnitsWinnersWhenMoreAttemptsThanCapacityRaceConcurrently() throws Exception {
-            // given
+            // given: each thread requests its own distinct, mutually-overlapping period
             int totalUnits = 3;
             int attempts = 15;
             InMemoryCarInventoryRepository repository =
                     new InMemoryCarInventoryRepository(new CarTypeInventory(CarType.VAN, totalUnits));
-            RentalPeriod period = new RentalPeriod(START, 3);
 
             // when
-            RaceResult result = raceForTheSamePeriod(repository, CarType.VAN, period, attempts);
+            RaceResult result = raceForOverlappingPeriods(repository, CarType.VAN, START, attempts);
 
             // then
             assertThat(result.succeeded()).isEqualTo(totalUnits);
             assertThat(result.rejected()).isEqualTo(attempts - totalUnits);
         }
 
-        private RaceResult raceForTheSamePeriod(
-                InMemoryCarInventoryRepository repository, CarType carType, RentalPeriod period, int attempts)
+        /**
+         * Races {@code attempts} threads, each requesting its own distinct {@link RentalPeriod} — the
+         * same {@code start}, a different positive {@code days} per thread — so every pair of periods
+         * genuinely overlaps (a shared start always overlaps another positive-duration period starting
+         * at that same instant) without every thread submitting a literally identical request.
+         */
+        private RaceResult raceForOverlappingPeriods(
+                InMemoryCarInventoryRepository repository, CarType carType, LocalDateTime start, int attempts)
                 throws Exception {
             ExecutorService executor = Executors.newFixedThreadPool(attempts);
             CountDownLatch ready = new CountDownLatch(attempts);
-            CountDownLatch start = new CountDownLatch(1);
+            CountDownLatch go = new CountDownLatch(1);
             AtomicInteger succeeded = new AtomicInteger();
             AtomicInteger rejected = new AtomicInteger();
             try {
                 List<Future<?>> futures = new ArrayList<>();
                 for (int i = 0; i < attempts; i++) {
+                    RentalPeriod period = new RentalPeriod(start, i + 1);
                     futures.add(executor.submit(() -> {
                         ready.countDown();
-                        awaitUninterruptibly(start);
+                        awaitUninterruptibly(go);
                         try {
                             repository.reserve(carType, period);
                             succeeded.incrementAndGet();
@@ -86,7 +93,7 @@ class InMemoryCarInventoryRepositoryConcurrencyTest {
                     }));
                 }
                 ready.await();
-                start.countDown();
+                go.countDown();
                 for (Future<?> future : futures) {
                     future.get();
                 }
