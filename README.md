@@ -82,6 +82,11 @@ see [`docs/testing.md`](docs/testing.md) and [ADR 0003](docs/decisions/0003-favo
   fewer than `totalUnits` existing reservations overlap it; existing reservations are never reassigned
   between units. In rare fragmented-inventory cases, a period a cleverer reassignment could still fit
   may be rejected. Chosen for simplicity and predictability over optimality.
+- **Unbounded per-type reservation scan** — `InMemoryCarInventoryRepository` keeps every reservation ever
+  accepted for a car type and scans all of them on each `reserve` call. Fine at this project's toy scale;
+  a real deployment would narrow via an indexed DB range query (`WHERE car_type=? AND start<? AND
+  end>?`) or an in-memory start-time-sorted structure bounded by a max rental duration. Neither requires
+  changing `CarTypeInventory` or `Reservation` — the domain rule is narrowing-strategy-agnostic by design.
 - **No cancellation or modification** of an existing reservation — the brief only asks for creating one.
 - **Fleet sizes are fixed at startup** (`application.yml`), with no admin API to inspect or adjust them
   at runtime — considered mid-project and deferred as new scope (see "Given more time").
