@@ -32,5 +32,9 @@ threads and asserts the exact success/rejection counts.
 - Touching (non-overlapping) periods are correctly treated as *not* overlapping — tested deliberately,
   not left accidental.
 - Capacity is tracked independently per car type.
+- Existing reservations that individually overlap a candidate, but don't overlap each other, correctly
+  leave enough capacity for the candidate (one vehicle can serve the non-overlapping existing ones
+  sequentially, freeing another for the candidate) — a fragmented-inventory case that a naive
+  overlap-count would incorrectly reject.
 - Concurrent reservation attempts for an overlapping period, with only one unit remaining, result in
   exactly one success and the rest rejected.

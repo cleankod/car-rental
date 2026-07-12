@@ -78,10 +78,13 @@ see [`docs/testing.md`](docs/testing.md) and [ADR 0003](docs/decisions/0003-favo
 - **In-memory only** — reservations don't survive a restart, and per-car-type locking only guarantees
   correctness within a single JVM; a real deployment would need a shared store with real transactional
   or optimistic-locking semantics. Deliberate: the brief explicitly allows simulating persistence.
-- **Conservative admission rule, not an optimal scheduler** — `CarTypeInventory` accepts a candidate iff
-  fewer than `totalUnits` existing reservations overlap it; existing reservations are never reassigned
-  between units. In rare fragmented-inventory cases, a period a cleverer reassignment could still fit
-  may be rejected. Chosen for simplicity and predictability over optimality.
+- **No per-vehicle assignment** — `CarTypeInventory` accepts a candidate iff the maximum number of
+  reservations simultaneously active at any instant (existing reservations plus the candidate) never
+  exceeds `totalUnits`, computed with a sweep over start/end events. This is the provably optimal
+  accept/reject test for scheduling identical, interchangeable units — it does not, however, say *which*
+  physical vehicle serves which reservation, since the domain has no per-vehicle identity, only a count.
+  Answering "which car" would need that identity plus a greedy assignment step; not needed by anything
+  currently in scope.
 - **No time zone** — `RentalPeriod`/`ReservationRequest` use `LocalDateTime` throughout, which carries no
   offset or zone; two clients in different time zones sending the same `LocalDateTime` value mean
   different real instants, silently. Assumes a single implicit time zone shared by client and server. A
