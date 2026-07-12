@@ -96,9 +96,18 @@ see [`docs/testing.md`](docs/testing.md) and [ADR 0003](docs/decisions/0003-favo
 
 ## AI usage disclosure
 
-This project was built with Claude Code (Anthropic), used throughout for design and implementation. All
-design and implementation decisions — architecture, domain model, concurrency strategy, testing
-approach — were directed and reviewed by me at each step; every non-trivial decision is recorded as an
+This project was built with Claude Code (Anthropic). The initial prompt that started it already fixed a
+substantial share of the design before any code existed: project identity and tech stack (Java 25,
+Spring Boot, Gradle Groovy DSL), a recommended architecture pattern (lightweight Hexagonal) explicitly
+flagged as a default to evaluate rather than accept mechanically, the exact non-trivial areas to focus
+depth on (limited inventory, rental-period boundary semantics, overlap detection, avoiding overbooking,
+atomic allocation under concurrency, domain/infrastructure separation, meaningful tests, documented
+limitations — precisely what this project ended up focusing on), the ADR policy, and the stage-by-stage
+branch/commit plan, plus a list of hard restrictions for the bootstrap step (no domain/feature code yet,
+no premature branch creation, no unjustified dependencies, and more).
+
+From there, all design and implementation decisions — architecture, domain model, concurrency strategy,
+testing approach — were directed and reviewed by me at each step; every non-trivial decision is recorded as an
 ADR under [`docs/decisions/`](docs/decisions/0001-use-lightweight-hexagonal-architecture.md) with the
 alternatives considered and why. Each stage (domain model, use case, persistence, REST adapter, testing,
 docs) was implemented on its own branch and reviewed before the next one started.
