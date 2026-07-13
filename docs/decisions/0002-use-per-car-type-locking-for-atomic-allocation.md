@@ -114,3 +114,8 @@ concurrency, not throughput under load.
 - Lock objects are created once per configured `CarType` at construction; a repository that needed to
   support car types added dynamically after construction would need additional care (e.g.
   `computeIfAbsent`) — not needed here since the fleet's car types are fixed at construction.
+- **`synchronized`, not `ReentrantLock`** — intrinsic locks are already reentrant, release automatically
+  when `CarUnavailableException` propagates out of the block (no `try`/`finally` needed), and none of
+  `ReentrantLock`'s real differentiators — `tryLock`/timeout, fairness, `Condition` — are needed here.
+  `tryLock(timeout)` would be the one genuine reason to revisit this, for fail-fast admission under heavy
+  contention — not needed today.
