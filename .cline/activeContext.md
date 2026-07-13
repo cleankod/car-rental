@@ -5,7 +5,7 @@
 - Branch: `documentation`
 - Based on: `master` after `black-box-testing` was merged (PR #7)
 - Task: finalizing documentation — README, MkDocs internal docs site (Material theme, Mermaid
-  diagrams), limitations/trade-offs, AI usage disclosure, "given more time". This is the last planned
+  diagrams), limitations/trade-offs, AI usage disclosure, "future improvements". This is the last planned
   stage.
 
 ## Most Recent Decisions
@@ -19,7 +19,7 @@
   pointer to its ADR (or to `.clinerules`' relevant rules section where there's no ADR), rather than
   re-deriving the reasoning in every location.
 
-## Still-open ideas for "given more time" (raised and deliberately deferred, not forgotten)
+## Still-open ideas for "future improvements" (raised and deliberately deferred, not forgotten)
 
 - Admin endpoints to inspect/adjust fleet state at runtime — deferred as new scope: `CarTypeInventory`
   is currently immutable, so this needs a new domain rule (what happens when shrinking a fleet below
@@ -40,7 +40,7 @@
 ## Project Status
 
 Every stage through `black-box-testing` is merged to `master`. Currently on `documentation`, the last
-planned stage — once this is reviewed and merged, the assessment is complete.
+planned stage — once this is reviewed and merged, the project is complete.
 
 ## Session Resumption Notes
 

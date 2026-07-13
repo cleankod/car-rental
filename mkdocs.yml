@@ -1,5 +1,5 @@
 site_name: 'Car Rental'
-site_description: 'Internal documentation for the Car Rental take-home assessment'
+site_description: 'Internal documentation for the Car Rental example project'
 
 theme:
   name: 'material'

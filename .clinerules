@@ -14,11 +14,9 @@ root, which points back here instead of duplicating rules. If you edit rules, ed
 - Avoid unexplained abbreviations
 - README and any docs site must consistently refer to the service as `Car Rental`
 
-## Assignment scope
+## Project scope
 
-Source: Charles River Development (State Street) technical assessment brief.
-
-Required behaviour, restated verbatim as bullet points:
+Required behaviour, restated as bullet points:
 
 - The system should allow reservation of a car of a given type at a desired date and time for a given
   number of days.
@@ -26,31 +24,28 @@ Required behaviour, restated verbatim as bullet points:
 - The number of cars of each type is limited.
 - Use unit tests to prove the system satisfies the requirements.
 
-Explicit framing from the brief:
+Explicit scope framing:
 
-- "A production ready solution is not expected; an effort equivalent to approximately two hours should
-  be sufficient." Keep the implementation proportional to that time-box.
-- "We encourage you to focus on areas where you have the greatest expertise and can demonstrate depth
-  rather than breadth." Depth on the non-trivial areas below matters more than covering every possible
-  feature.
-- "Please clearly note any known limitations or tradeoffs in your solution." This is a graded
-  requirement, not an optional courtesy — the README must contain an explicit limitations/trade-offs
-  section.
-- AI-assisted tools are explicitly permitted; all design/implementation decisions are still mine to
-  explain in the interview. Document AI usage briefly in the README.
-- The brief describes a *simulated* system. This licenses simulating/in-memory persistence and skipping
+- Not intended to be production-ready; keep the implementation proportional to a small, focused scope
+  (roughly two hours of effort).
+- Favor depth on a few non-trivial areas over breadth across many features — depth in the areas of
+  greatest interest matters more than covering every possible feature.
+- Known limitations or trade-offs in the solution must be clearly noted. This is a firm requirement,
+  not an optional courtesy — the README must contain an explicit limitations/trade-offs section.
+- AI-assisted tools may be used for implementation; all design/implementation decisions should remain
+  understood and explainable. Document AI usage briefly in the README.
+- The system is *simulated*. This licenses simulating/in-memory persistence and skipping
   real infrastructure — it does **not** license skipping the reservation behaviour itself, the limited
-  inventory constraint, overlap handling, or unit tests. Those four are the graded core.
-- The interview will ask me to explain technical decisions and reasoning, and to show depth in areas I
-  chose to invest in — decisions and trade-offs must be defensible out loud, not just present in code.
+  inventory constraint, overlap handling, or unit tests. Those four are the core requirements.
+- Decisions and trade-offs must be defensible and explainable, not just present in code.
 
-The assignment names no endpoint paths, field names, or contracts to preserve verbatim — there is no
-prescribed API shape. Any REST surface is an optional convenience layer we add on top of the core
-use case (see "Architecture rules" and the REST API section below), not something the brief requires.
+No endpoint paths, field names, or contracts are prescribed verbatim — there is no prescribed API shape.
+Any REST surface is an optional convenience layer added on top of the core use case (see "Architecture
+rules" and the REST API section below), not a strict requirement.
 
 ## Technology stack
 
-<!-- Baseline — held across every assessment of this shape and safe to keep as-is. -->
+<!-- Baseline — held across every project of this shape and safe to keep as-is. -->
 
 - Java 25
 - Spring Boot 4
@@ -65,15 +60,15 @@ No Testcontainers, Micrometer, or Spring Boot Actuator: there is no container-ba
 broker) to test against, and no running service whose metrics/health would be meaningful to expose.
 MkDocs (Material theme, Mermaid diagrams) is used for internal docs — see "Documentation rules".
 
-## Technology choices — per assignment
+## Technology choices — per project
 
 - **Architecture pattern**: lightweight Hexagonal Architecture — see "Architecture rules" below for the
   full evaluation against plain layered and why (ADR 0001).
 - **Persistence**: plain in-memory collections, guarded for thread safety. Nothing needs to survive a
   restart or be queried relationally; a real database would be disproportionate infrastructure for a
-  simulated system the brief explicitly allows to simulate.
+  simulated system this project's scope explicitly allows to simulate.
 - **Schema migrations**: none. There is no schema.
-- **Messaging**: none. The brief describes a single synchronous reservation operation, not an
+- **Messaging**: none. This project involves a single synchronous reservation operation, not an
   event/queue-driven flow.
 - **Secondary/mocked integrations**: none. There is no second system to mock — the in-memory store *is*
   the real (simulated) persistence for this system, not a stand-in for something else.
@@ -101,23 +96,23 @@ MkDocs (Material theme, Mermaid diagrams) is used for internal docs — see "Doc
 
 ## Architecture rules
 
-- Choose an architecture pattern that fits the assignment's actual shape — do not default to
-  Hexagonal/Ports-and-Adapters out of habit; it's the right tool for some assignments and overkill for
+- Choose an architecture pattern that fits the project's actual shape — do not default to
+  Hexagonal/Ports-and-Adapters out of habit; it's the right tool for some projects and overkill for
   others.
   - **Hexagonal / Ports and Adapters** earns its cost when there are multiple real inbound/outbound
     integrations and at least one is mocked or plausibly swappable. The port boundary is what makes the
     mock honest.
   - **Plain layered** (`controller` / `service` / `repository`) is more honest — and faster to build
-    and explain — for a single-integration, CRUD-shaped assignment. Don't invent ports/adapters
+    and explain — for a single-integration, CRUD-shaped project. Don't invent ports/adapters
     ceremony for one technology per side.
-  - **Selected for this assignment: lightweight Hexagonal**, evaluated (not defaulted) against plain
+  - **Selected for this project: lightweight Hexagonal**, evaluated (not defaulted) against plain
     layered — full evaluation, including why the classic trigger above doesn't strictly apply here and
     why it's still worth it at near-zero incremental cost, is in
     `docs/decisions/0001-use-lightweight-hexagonal-architecture.md`. Kept deliberately *lightweight*:
     `adapter.in.rest`/`adapter.out.persistence` exist because those technologies are real; no *further*
-    subtree is added for technologies this assignment doesn't have (messaging, secondary integrations).
+    subtree is added for technologies this project doesn't have (messaging, secondary integrations).
 - Prefer boring, explicit code over clever code, regardless of pattern.
-- Keep the design easy to explain in an interview.
+- Keep the design easy to explain.
 - Do not use CQRS, event sourcing, sagas, multi-module Gradle, or outbox pattern unless explicitly approved.
 - Document such patterns as future improvements where appropriate.
 
@@ -126,7 +121,7 @@ MkDocs (Material theme, Mermaid diagrams) is used for internal docs — see "Doc
 - Keep the domain pure and framework-free.
 - Domain must not depend on: Spring, JDBC, REST/web APIs.
 - Ports belong in the application layer, not in the domain layer.
-- Because this assignment has a single cohesive feature (car reservation), package-by-feature collapses
+- Because this project has a single cohesive feature (car reservation), package-by-feature collapses
   to a root-level split — a nested `reservation/` feature package would be redundant ceremony for one
   feature. Use this package layout:
 
@@ -226,9 +221,9 @@ eu.cleankod.carrental
   deliberately mirrors `RentalPeriod`'s own `(start, days)` shape rather than a `start`/`end` date range.
   An end-timestamp would be more conventional for an HTTP client, but would require inventing a policy
   for what happens when the gap isn't a whole number of days (reject it? silently round it, shifting the
-  actual return time the client asked for?) — that policy question is tangential to what this assignment
-  grades, and the brief's own wording ("for a given number of days") already matches the `days` shape.
-  Considered and decided against the alternative, not defaulted.
+  actual return time the client asked for?) — that policy question is tangential to this project's
+  actual scope, and the requirement's own wording ("for a given number of days") already matches the
+  `days` shape. Considered and decided against the alternative, not defaulted.
 - Response: `201 Created` with the created reservation (`id`, `carType`, `start`, `days`).
 - Validate input using Bean Validation (`@NotNull`, `@Positive`).
 - Global error handling (`RestExceptionHandler`, `@RestControllerAdvice`) maps: `CarUnavailableException`
@@ -251,12 +246,12 @@ eu.cleankod.carrental
   attempt with its reason).
 - Micrometer, Spring Boot Actuator, and any other metrics/tracing stack are explicitly out of scope —
   there is no long-running service here for them to monitor meaningfully, and adding them would be
-  infrastructure for its own sake in a two-hour take-home.
+  infrastructure for its own sake in a small, focused project.
 
 ## Testing rules
 
-- Pure-domain unit tests remain the primary proof of the business rule — the brief explicitly asks for
-  unit tests. An integration test through the REST entry point additionally proves the wiring and is
+- Pure-domain unit tests remain the primary proof of the business rule — unit tests are an explicit
+  requirement. An integration test through the REST entry point additionally proves the wiring and is
   what enables refactoring/TDD without test churn (see below). No Testcontainers, no DB/broker
   integration tests: there is nothing external to integrate with.
 - Use JUnit 5 and AssertJ.
@@ -307,7 +302,7 @@ eu.cleankod.carrental
 
 - Provide a multi-stage Dockerfile and a Docker Compose file that runs the app only — no broker, no
   database container, since none exist in this design. These exist mainly so the optional REST adapter
-  (if built) can be demoed; they are not required to prove the assignment's requirements, which unit
+  (if built) can be demoed; they are not required to prove the project's requirements, which unit
   tests already do.
 - The Dockerfile does not build the jar — it packages a jar that must already exist in `build/libs`
   (run `./gradlew bootJar` on the host or in a CI build step first). This mirrors how a real CI pipeline
@@ -332,27 +327,27 @@ eu.cleankod.carrental
 ## Documentation rules
 
 - Provide a README (created fresh at the start of real project work, not copied from the skeleton).
-- README must explain: assignment summary, prerequisites, quick start, running tests, architecture
+- README must explain: project summary, prerequisites, quick start, running tests, architecture
   overview (including why lightweight Hexagonal was chosen over plain layered), the concurrency
-  approach and how it's tested, known limitations and trade-offs (explicitly required by the brief), AI
-  usage disclosure, and a "given more time" section. Keep it short — link to the MkDocs site for depth
-  rather than duplicating it.
+  approach and how it's tested, known limitations and trade-offs (an explicit requirement), AI
+  usage disclosure, and a "future improvements" section. Keep it short — link to the MkDocs site for
+  depth rather than duplicating it.
 - Internal docs use MkDocs (Material theme) under `docs/`, covering architecture and testing strategy
   in more depth than the README; `docs/decisions/` (the ADRs) is part of the same site's nav. Diagrams
   use Mermaid (via `pymdownx.superfences`, native to the Material theme — no extra plugin needed).
 - Every doc has exactly one authoritative home for its full rationale (an ADR, or the relevant
   `.clinerules` section for decisions with no ADR) — other files state the conclusion and link there,
   they do not re-derive the reasoning.
-- README commands must be copy-paste verified before submission.
+- README commands must be copy-paste verified before finalizing.
 - Documentation must not overpromise features.
-- "Given more time" must not include things essential for the assignment (i.e. must not be used to wave
-  away the graded core: reservation flow, limited inventory, overlap handling, unit tests).
+- "Future improvements" must not include things essential to this project (i.e. must not be used to
+  wave away the core requirements: reservation flow, limited inventory, overlap handling, unit tests).
 
 ## Architecture Decision Records
 
 - Location: `docs/decisions/`, sequentially numbered, e.g. `0001-use-lightweight-hexagonal-architecture.md`.
   Numbering starts at the first decision that actually earns an ADR — Java 25 and Gradle Groovy DSL were
-  fixed inputs to this assignment, not evaluated choices, so they don't get one (see the exclusion below).
+  fixed inputs to this project, not evaluated choices, so they don't get one (see the exclusion below).
 - Each ADR must include: title, status, context, decision drivers, considered options, advantages and
   disadvantages of each meaningful option, selected decision, rationale, consequences, known limitations
   or risks.
@@ -379,8 +374,8 @@ eu.cleankod.carrental
   6. `feat: expose reservation REST API` (only if this stage is undertaken)
   7. `test: restructure suite toward black-box coverage through the REST entry point` (delete
      redundant per-layer tests, add/strengthen REST-level scenarios, ADR 0003)
-  8. `docs: finalize assessment documentation` (README, limitations/trade-offs, AI usage disclosure,
-     "given more time")
+  8. `docs: finalize project documentation` (README, limitations/trade-offs, AI usage disclosure,
+     "future improvements")
 - Do not proceed to the next commit if current tests/build are broken.
 
 ## Branching workflow
@@ -421,7 +416,7 @@ eu.cleankod.carrental
 - Persisting reservations beyond process memory (a real database)
 - A REST API, if the optional stage is not undertaken (or, if it is, anything beyond a minimal
   synchronous create-reservation endpoint — auth, rate limiting, pagination, etc.)
-- Cancelling/modifying an existing reservation (the brief only asks for creating one)
+- Cancelling/modifying an existing reservation (only creating one is required)
 - Pricing/billing
 - Full observability stack (metrics, tracing)
 - CI/CD pipeline

@@ -2,7 +2,7 @@
 
 A simulated car rental reservation system: given a car type, a desired start date/time, and a number of
 days, reserve one unit of that type if the fleet has capacity — atomically, even under concurrent
-requests. Built as a take-home technical assessment.
+requests.
 
 ## What the system does
 

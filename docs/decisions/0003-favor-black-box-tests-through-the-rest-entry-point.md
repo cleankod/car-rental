@@ -30,7 +30,7 @@ adopts: *"This tolerates internal refactoring without test breakage."*
 - Refactorability: internal restructuring of `ReservationService` or `InMemoryCarInventoryRepository`
   (e.g. merging the service into the controller, changing the repository's locking strategy) should not
   break tests as long as the HTTP contract is unchanged.
-- The brief explicitly asks for unit tests — this must not be read as license to remove unit tests from
+- This project's requirements explicitly ask for unit tests — this must not be read as license to remove unit tests from
   the layer where they genuinely earn their keep: the pure domain rules (`RentalPeriod`,
   `CarTypeInventory`) that this system's correctness actually rests on.
 - Concurrency-safety is a named non-trivial requirement that cannot be reliably proven through real HTTP
