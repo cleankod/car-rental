@@ -1,12 +1,12 @@
 # Car Rental
 
-Charles River Development / State Street technical assessment: a simulated car rental system. Given a
-car type (Sedan, SUV, or Van), a desired start date/time, and a number of days, reserve one unit of
-that type if the fleet has capacity — atomically, even under concurrent requests.
+A simulated car rental system. Given a car type (Sedan, SUV, or Van), a desired start date/time, and a
+number of days, reserve one unit of that type if the fleet has capacity — atomically, even under
+concurrent requests.
 
 Full internal docs (architecture, request flow, testing strategy, ADRs) live in [`docs/`](docs/index.md)
 as an MkDocs site — see [Docs site](#docs-site) below to run it locally. This README covers setup,
-verification, and the assessment-specific write-ups (limitations, AI usage, given more time).
+verification, and additional notes (limitations, AI usage, future improvements).
 
 ## Prerequisites
 
@@ -77,7 +77,8 @@ see [`docs/testing.md`](docs/testing.md) and [ADR 0003](docs/decisions/0003-favo
 
 - **In-memory only** — reservations don't survive a restart, and per-car-type locking only guarantees
   correctness within a single JVM; a real deployment would need a shared store with real transactional
-  or optimistic-locking semantics. Deliberate: the brief explicitly allows simulating persistence.
+  or optimistic-locking semantics. Deliberate: persistence is simulated rather than backed by a real
+  database for this example.
 - **No per-vehicle assignment** — `CarTypeInventory` accepts a candidate iff the maximum number of
   reservations simultaneously active at any instant (existing reservations plus the candidate) never
   exceeds `totalUnits`, computed with a sweep over start/end events. This is the provably optimal
@@ -94,9 +95,9 @@ see [`docs/testing.md`](docs/testing.md) and [ADR 0003](docs/decisions/0003-favo
   a real deployment would narrow via an indexed DB range query (`WHERE car_type=? AND start<? AND
   end>?`) or an in-memory start-time-sorted structure bounded by a max rental duration. Neither requires
   changing `CarTypeInventory` or `Reservation` — the domain rule is narrowing-strategy-agnostic by design.
-- **No cancellation or modification** of an existing reservation — the brief only asks for creating one.
+- **No cancellation or modification** of an existing reservation — only creating one is supported.
 - **Fleet sizes are fixed at startup** (`application.yml`), with no admin API to inspect or adjust them
-  at runtime — considered mid-project and deferred as new scope (see "Given more time").
+  at runtime — considered mid-project and deferred as new scope (see "Future improvements").
 - **No past-date validation** — a reservation can be requested for a start date in the past; nothing in
   the domain currently depends on "the current moment," so there's no `Clock` abstraction either
   (deferred alongside the admin-API idea, for the same reason: not needed by anything currently in scope).
@@ -104,7 +105,7 @@ see [`docs/testing.md`](docs/testing.md) and [ADR 0003](docs/decisions/0003-favo
   have no dedicated unit test, a bug there surfaces as a failing REST test, not a failing lower-layer
   one. Traded deliberately for refactorability (see ADR 0003).
 - **No auth, rate limiting, pagination, observability stack (Actuator/Micrometer), or CI/CD** — out of
-  scope for a two-hour take-home; none of these are what the brief grades.
+  scope for a small, focused example project.
 
 ## AI usage disclosure
 
@@ -138,7 +139,7 @@ Every stage's build and tests were run and confirmed green before committing, th
 run repeatedly to rule out flakiness, and every command in this README was actually executed, not just
 written down.
 
-## Given more time
+## Future improvements
 
 - Admin endpoints to inspect and adjust fleet state at runtime — needs a new domain rule first (what
   happens when shrinking a fleet below its currently active reservation count).

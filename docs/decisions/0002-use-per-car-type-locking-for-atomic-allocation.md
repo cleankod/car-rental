@@ -9,18 +9,17 @@ Accepted
 `CarInventoryRepository.reserve(carType, period)` must atomically check availability
 (`CarTypeInventory.hasCapacityFor`) and record a new reservation, so that concurrent calls for the same
 car type and an overlapping period cannot both succeed when only one matching unit remains — this is one
-of the brief's explicitly named non-trivial areas. Reservations for different car types are entirely
+of this project's explicitly named non-trivial areas. Reservations for different car types are entirely
 independent — the domain rule itself (`CarTypeInventory.hasCapacityFor`) already operates per `CarType`,
 so there is no correctness reason to serialize a SEDAN request behind a VAN request.
 
 ## Decision Drivers
 
 - Must never allow overbooking under concurrent access, under any interleaving.
-- Correctness matters far more than throughput for a simulated, single-process take-home — but
+- Correctness matters far more than throughput for a simulated, single-process system — but
   introducing avoidable contention between unrelated car types would be a real design smell, not a
   neutral simplification.
-- Must stay simple enough to implement, test, and defend live in an interview within the assignment's
-  two-hour scope.
+- Must stay simple enough to implement, test, and explain within this project's small, focused scope.
 - Must keep the domain's pure `CarTypeInventory.hasCapacityFor` rule completely unaware of how atomicity
   is achieved (the separation ADR 0001 is built around).
 
@@ -57,8 +56,8 @@ so there is no correctness reason to serialize a SEDAN request behind a VAN requ
 
 - Avoids blocking entirely; could offer better throughput under heavy contention.
 - Meaningfully more complex to implement correctly (retry loops, reasoning about visibility and retry
-  storms for a list-shaped piece of state) and harder to defend live in an interview than a lock.
-- Disproportionate engineering effort for a two-hour take-home whose graded requirement is correctness
+  storms for a list-shaped piece of state) and harder to reason about and explain than a lock.
+- Disproportionate engineering effort for a small project whose core requirement is correctness
   under concurrency, not throughput under load.
 
 ## Decision
@@ -75,10 +74,10 @@ to avoid the classic hazard of synchronizing on an object other, unrelated code 
 
 This mirrors, at the concurrency layer, the partitioning the domain rule already has, giving the
 strongest correctness guarantee (no overbooking, ever) without introducing avoidable contention between
-unrelated car types. `synchronized` blocks are simple, well-understood, and easy to defend in an
-interview — appropriate given the brief's own guidance to keep the implementation proportional to a
-two-hour time-box. A lock-free approach would be more sophisticated but disproportionate: this assignment
-is graded on correctness under concurrency, not throughput under load.
+unrelated car types. `synchronized` blocks are simple, well-understood, and easy to reason about and
+explain — appropriate for a project whose scope is kept intentionally small. A lock-free approach would
+be more sophisticated but disproportionate: this project's core requirement is correctness under
+concurrency, not throughput under load.
 
 ## Consequences
 
@@ -107,11 +106,11 @@ is graded on correctness under concurrency, not throughput under load.
 
 - `synchronized` blocks the calling thread while another reservation attempt for the same type is in
   progress; under very heavy contention for a single popular car type this would limit throughput. Not a
-  concern at this assignment's scope.
+  concern at this project's scope.
 - If the system needed to scale beyond a single JVM (e.g. multiple instances behind a load balancer),
   in-memory per-type locks would no longer provide a global guarantee — a real deployment would need a
   shared store with proper transactional or optimistic-locking semantics (e.g. a database with a unique
-  constraint or row-level locking). Out of scope for this simulated, single-process assignment.
+  constraint or row-level locking). Out of scope for this simulated, single-process project.
 - Lock objects are created once per configured `CarType` at construction; a repository that needed to
   support car types added dynamically after construction would need additional care (e.g.
   `computeIfAbsent`) — not needed here since the fleet's car types are fixed at construction.

@@ -11,7 +11,7 @@ says "Cline," read that as "the AI assistant," regardless of which tool is activ
 
 Project state lives in `.cline/`:
 
-- `.cline/projectbrief.md` — what the assignment is and its hard constraints
+- `.cline/projectbrief.md` — what this project is and its hard constraints
 - `.cline/techContext.md` — tech stack, architecture, domain model, ports, running decision log
 - `.cline/activeContext.md` — current branch/task and recent decisions — read this first when resuming
 - `.cline/progress.md` — one row per branch/stage, what's merged vs. planned
